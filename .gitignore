@@ -82,9 +82,15 @@ npm-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
+# env files (can opt-in for committing if needed)
+.env*
+
+# vercel
+.vercel
+
+# base de données SQLite locale (commandes)
+/data/*.db
+
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
-
-# Next.js
-/public

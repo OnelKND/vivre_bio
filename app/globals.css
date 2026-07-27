@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&family=Great+Vibes&display=swap');
 @import "tailwindcss";
 
 @plugin "daisyui" {
@@ -46,8 +45,8 @@
 }
 
 @theme {
-  --font-sans: "Poppins", sans-serif;
-  --font-accent: "Great Vibes", cursive;
+  --font-sans: var(--font-poppins), sans-serif;
+  --font-accent: var(--font-great-vibes), cursive;
 }
 
 body {
