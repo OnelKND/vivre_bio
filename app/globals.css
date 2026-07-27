@@ -1,0 +1,55 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&family=Great+Vibes&display=swap');
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: vivrebio --default;
+}
+
+@plugin "daisyui/theme" {
+  name: "vivrebio";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #FFFFFF;
+  --color-base-200: #F5F3ED;
+  --color-base-300: #E8E5DB;
+  --color-base-content: #1E2A1F;
+
+  --color-primary: #2E7D32;
+  --color-primary-content: #FFFFFF;
+
+  --color-secondary: #7CB342;
+  --color-secondary-content: #FFFFFF;
+
+  --color-accent: #E31E24;
+  --color-accent-content: #FFFFFF;
+
+  --color-neutral: #1E2A1F;
+  --color-neutral-content: #FFFFFF;
+
+  --color-info: #3ABFF8;
+  --color-info-content: #FFFFFF;
+
+  --color-success: #2E7D32;
+  --color-success-content: #FFFFFF;
+
+  --color-warning: #F5A524;
+  --color-warning-content: #1E2A1F;
+
+  --color-error: #E31E24;
+  --color-error-content: #FFFFFF;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.75rem;
+}
+
+@theme {
+  --font-sans: "Poppins", sans-serif;
+  --font-accent: "Great Vibes", cursive;
+}
+
+body {
+  font-family: var(--font-sans);
+}
