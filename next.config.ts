@@ -51,7 +51,9 @@ const nextConfig: NextConfig = {
   // écrit donc la sortie ailleurs, sur le disque principal (bien plus
   // grand) — sans rapport avec le reste de la config, uniquement pour
   // contourner cette contrainte locale.
-  distDir: ".next-build",
+  // Netlify n'a pas cette contrainte et attend la sortie par défaut dans
+  // `.next`, donc on ne l'applique pas sur leur environnement de build.
+  ...(process.env.NETLIFY ? {} : { distDir: ".next-build" }),
   images: {
     // Les photos produits sont pour l'instant des SVG placeholder générés
     // localement (aucun contenu utilisateur) ; à retirer si elles sont
