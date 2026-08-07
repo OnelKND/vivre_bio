@@ -5,7 +5,7 @@ import ContactForm from "./ContactForm";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contactez VIVRE BIO à Cotonou, Bénin, par téléphone, WhatsApp, email ou via notre formulaire de contact.",
+    "Contactez VIVRE BIO à Porto-Novo, Bénin, par téléphone, WhatsApp, email ou via notre formulaire de contact.",
 };
 
 export default function ContactPage() {
@@ -22,7 +22,7 @@ export default function ContactPage() {
         <ul className="space-y-3 text-base-content/80">
           <li className="flex items-center gap-3">
             <i className="fa-solid fa-location-dot text-primary w-5" aria-hidden="true" />
-            Cotonou, Bénin
+            Porto-Novo, Bénin
           </li>
           <li className="flex items-center gap-3">
             <i className="fa-solid fa-phone text-primary w-5" aria-hidden="true" />

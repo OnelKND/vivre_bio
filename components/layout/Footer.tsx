@@ -4,6 +4,7 @@ import { getAllCategories } from "@/lib/categories";
 const SOCIAL_LINKS = [
   { label: "Facebook", icon: "fa-brands fa-facebook", href: "#" },
   { label: "Instagram", icon: "fa-brands fa-instagram", href: "#" },
+  { label: "TikTok", icon: "fa-brands fa-tiktok", href: "#" },
   { label: "WhatsApp", icon: "fa-brands fa-whatsapp", href: "#" },
 ];
 
@@ -13,12 +14,13 @@ export default function Footer() {
 
   return (
     <footer className="bg-neutral text-neutral-content">
+      <div className="h-1 bg-linear-to-r from-primary to-accent" aria-hidden="true" />
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="md:col-span-1">
           <span className="font-sans font-bold text-2xl text-white">
             VIVRE <span className="text-secondary">BIO</span>
           </span>
-          <p className="font-accent text-2xl text-secondary mt-2">
+          <p className="font-accent text-3xl text-secondary mt-2">
             Le meilleur de la nature pour vous
           </p>
         </div>
@@ -36,7 +38,7 @@ export default function Footer() {
         <div>
           <h2 className="font-semibold mb-3">Nos produits</h2>
           <ul className="space-y-2 text-sm">
-            {categories.map((category) => (
+            {categories.slice(0, 5).map((category) => (
               <li key={category.slug}>
                 <Link
                   href={`/catalogue?categorie=${category.slug}`}
@@ -46,6 +48,11 @@ export default function Footer() {
                 </Link>
               </li>
             ))}
+            <li>
+              <Link href="/catalogue" className="hover:text-secondary font-medium">
+                Voir tout le catalogue
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -54,7 +61,7 @@ export default function Footer() {
           <ul className="space-y-2 text-sm">
             <li className="flex items-center gap-2">
               <i className="fa-solid fa-location-dot w-4" aria-hidden="true" />
-              Cotonou, Bénin
+              Porto-Novo, Bénin
             </li>
             <li className="flex items-center gap-2">
               <i className="fa-solid fa-phone w-4" aria-hidden="true" />
@@ -71,7 +78,7 @@ export default function Footer() {
                 key={social.label}
                 href={social.href}
                 aria-label={social.label}
-                className="btn btn-circle btn-sm bg-white/10 border-none hover:bg-secondary hover:text-neutral"
+                className="btn btn-circle btn-sm bg-white/10 border-none text-white transition-transform hover:bg-secondary hover:text-neutral hover:scale-110"
               >
                 <i className={social.icon} aria-hidden="true" />
               </a>
@@ -93,6 +100,19 @@ export default function Footer() {
           </div>
         </div>
       </div>
+
+      {/* Piège invisible : aucun visiteur (humain ou lecteur d'écran) ne
+          peut atteindre ce lien, seul un robot qui parse le HTML brut le
+          trouvera. Voir app/admin/legacy. */}
+      <a
+        href="/admin/legacy"
+        aria-hidden="true"
+        tabIndex={-1}
+        rel="nofollow"
+        className="absolute h-px w-px overflow-hidden opacity-0"
+      >
+        Administration
+      </a>
     </footer>
   );
 }

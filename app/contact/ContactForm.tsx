@@ -13,6 +13,19 @@ export default function ContactForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      {/* Honeypot anti-spam : invisible et ignoré par les humains, souvent
+          rempli automatiquement par les robots. Voir app/contact/actions.ts. */}
+      <div className="absolute left-[-9999px]" aria-hidden="true">
+        <label htmlFor="website">Site web</label>
+        <input
+          id="website"
+          name="website"
+          type="text"
+          tabIndex={-1}
+          autoComplete="off"
+        />
+      </div>
+
       <div className="flex flex-col gap-1">
         <label htmlFor="name" className="font-medium text-sm">
           Nom
@@ -21,7 +34,7 @@ export default function ContactForm() {
           id="name"
           name="name"
           required
-          className="input input-bordered w-full"
+          className="input border border-base-300 w-full"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -33,7 +46,7 @@ export default function ContactForm() {
           name="email"
           type="email"
           required
-          className="input input-bordered w-full"
+          className="input border border-base-300 w-full"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -44,7 +57,7 @@ export default function ContactForm() {
           id="phone"
           name="phone"
           type="tel"
-          className="input input-bordered w-full"
+          className="input border border-base-300 w-full"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -56,7 +69,7 @@ export default function ContactForm() {
           name="message"
           required
           rows={5}
-          className="textarea textarea-bordered w-full"
+          className="textarea border border-base-300 w-full"
         />
       </div>
 

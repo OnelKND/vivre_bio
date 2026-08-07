@@ -16,7 +16,7 @@ export default function MentionsLegalesPage() {
       </p>
       <h2>Éditeur du site</h2>
       <p>
-        VIVRE BIO — Cotonou, République du Bénin.
+        VIVRE BIO — République du Bénin.
         <br />
         Contact : contact@vivrebio.bj
       </p>

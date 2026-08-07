@@ -2,16 +2,16 @@
 
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { getProductBySlug, type Product } from "@/lib/products";
+import type { Product } from "@/lib/products";
 import { formatFCFA } from "@/lib/format";
 import CartLineItem from "@/components/cart/CartLineItem";
 
-export default function CartPageClient() {
+export default function CartPageClient({ products }: { products: Product[] }) {
   const { lines, clearCart } = useCart();
 
   const items = lines
     .map((line) => {
-      const product = getProductBySlug(line.slug);
+      const product = products.find((candidate) => candidate.slug === line.slug);
       return product ? { product, quantity: line.quantity } : null;
     })
     .filter((item): item is { product: Product; quantity: number } => item !== null);

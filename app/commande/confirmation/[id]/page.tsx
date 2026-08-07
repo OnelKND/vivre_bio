@@ -40,6 +40,13 @@ export default async function OrderConfirmationPage({
         <p className="text-sm text-base-content/60">
           Paiement à la livraison, en espèces ou par Mobile Money.
         </p>
+        <p className="text-sm text-base-content/60">
+          Vous pourrez suivre l&apos;avancement de votre commande à tout moment sur{" "}
+          <Link href="/suivi-commande" className="link link-primary">
+            la page de suivi
+          </Link>
+          , avec le numéro #{order.id} et votre téléphone.
+        </p>
       </div>
 
       <div className="rounded-box border border-base-300 p-6">

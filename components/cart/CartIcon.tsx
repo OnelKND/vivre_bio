@@ -14,8 +14,11 @@ export default function CartIcon() {
     >
       <i className="fa-solid fa-cart-shopping text-lg" aria-hidden="true" />
       {totalItems > 0 && (
-        <span className="absolute -top-1 -right-1 badge badge-accent badge-sm text-accent-content">
-          {totalItems}
+        <span
+          key={totalItems}
+          className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[11px] font-bold text-accent-content ring-2 ring-base-100 animate-[cart-badge-pop_300ms_ease-out]"
+        >
+          {totalItems > 99 ? "99+" : totalItems}
         </span>
       )}
     </Link>

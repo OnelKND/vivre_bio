@@ -1,21 +1,35 @@
 import Link from "next/link";
 import type { Product } from "@/lib/products";
+import { getCategoryBySlug } from "@/lib/categories";
 import { formatFCFA } from "@/lib/format";
 import ProductImage from "./ProductImage";
 import AddToCartButton from "@/components/cart/AddToCartButton";
+import Badge from "@/components/ui/Badge";
 
 export default function ProductCard({ product }: { product: Product }) {
+  const category = getCategoryBySlug(product.category);
+
   return (
-    <article className="group flex flex-col gap-3">
+    <article className="group flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1">
       <div className="relative">
         <Link href={`/produits/${product.slug}`} className="block">
           <ProductImage src={product.image} alt={product.name} />
         </Link>
+        {product.featured && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="accent">Vedette</Badge>
+          </div>
+        )}
         <div className="absolute bottom-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
           <AddToCartButton slug={product.slug} className="btn-sm btn-circle shadow-md" />
         </div>
       </div>
       <div className="flex flex-col gap-1">
+        {category && (
+          <span className="text-xs font-semibold uppercase tracking-wide text-secondary">
+            {category.name}
+          </span>
+        )}
         <Link
           href={`/produits/${product.slug}`}
           className="font-semibold hover:text-primary transition-colors"

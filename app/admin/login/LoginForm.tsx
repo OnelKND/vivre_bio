@@ -20,7 +20,7 @@ export default function LoginForm() {
           type="password"
           required
           autoFocus
-          className="input input-bordered w-full"
+          className="input border border-base-300 w-full"
         />
       </div>
       {state.status === "error" && (

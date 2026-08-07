@@ -12,6 +12,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Sortie de `next build` (voir NEXT_BUILD_DIR/tsconfig.json) : mêmes
+    // fichiers générés que .next/**, jamais destinés à être lintés.
+    ".next-build/**",
   ]),
 ]);
 

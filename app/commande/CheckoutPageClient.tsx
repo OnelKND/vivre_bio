@@ -1,32 +1,41 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
-import { getProductBySlug, type Product } from "@/lib/products";
+import type { Product } from "@/lib/products";
 import { getAllDeliveryZones } from "@/lib/delivery-zones";
 import { formatFCFA } from "@/lib/format";
 import { createOrder, type CheckoutFormState } from "./actions";
 
 const initialState: CheckoutFormState = { status: "idle" };
 
-export default function CheckoutPageClient() {
+export default function CheckoutPageClient({ products }: { products: Product[] }) {
   const { lines } = useCart();
   const zones = getAllDeliveryZones();
   const [zoneSlug, setZoneSlug] = useState(zones[0]?.slug ?? "");
   const [state, formAction, pending] = useActionState(createOrder, initialState);
+  const [idempotencyKey, setIdempotencyKey] = useState("");
+
+  useEffect(() => {
+    // Généré côté client uniquement (après montage) pour éviter un
+    // décalage serveur/client : la même clé identifie une seule soumission
+    // du formulaire, même en cas de double-clic ou de resoumission.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIdempotencyKey(crypto.randomUUID());
+  }, []);
 
   const items = useMemo(
     () =>
       lines
         .map((line) => {
-          const product = getProductBySlug(line.slug);
+          const product = products.find((candidate) => candidate.slug === line.slug);
           return product ? { product, quantity: line.quantity } : null;
         })
         .filter(
           (item): item is { product: Product; quantity: number } => item !== null
         ),
-    [lines]
+    [lines, products]
   );
 
   const subtotal = items.reduce(
@@ -57,6 +66,7 @@ export default function CheckoutPageClient() {
 
       <form action={formAction} className="grid md:grid-cols-2 gap-10">
         <input type="hidden" name="cartItems" value={JSON.stringify(lines)} />
+        <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -67,19 +77,19 @@ export default function CheckoutPageClient() {
               id="customerName"
               name="customerName"
               required
-              className="input input-bordered w-full"
+              className="input border border-base-300 w-full"
             />
           </div>
           <div className="flex flex-col gap-1">
             <label htmlFor="phone" className="font-medium text-sm">
-              Téléphone
+              Téléphone (Numéro Whatsapp de préférence)
             </label>
             <input
               id="phone"
               name="phone"
               type="tel"
               required
-              className="input input-bordered w-full"
+              className="input border border-base-300 w-full"
             />
           </div>
           <div className="flex flex-col gap-1">
@@ -89,9 +99,10 @@ export default function CheckoutPageClient() {
             <textarea
               id="address"
               name="address"
+              placeholder="(Votre adresse de livraison complète)"
               required
               rows={3}
-              className="textarea textarea-bordered w-full"
+              className="textarea border border-base-300 w-full"
             />
           </div>
 

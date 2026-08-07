@@ -9,13 +9,18 @@ const SESSION_MAX_AGE_MS = 1000 * 60 * 60 * 24 * 14; // 14 jours
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    console.warn(
-      "[admin-auth] SESSION_SECRET non défini : utilisation d'une clé de développement non sécurisée. À définir impérativement en production."
+  if (secret) return secret;
+
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      "[admin-auth] SESSION_SECRET non défini : refus de démarrer en production avec un secret par défaut."
     );
-    return "dev-only-insecure-secret-change-me";
   }
-  return secret;
+
+  console.warn(
+    "[admin-auth] SESSION_SECRET non défini : utilisation d'une clé de développement non sécurisée. À définir impérativement en production."
+  );
+  return "dev-only-insecure-secret-change-me";
 }
 
 function sign(value: string): string {

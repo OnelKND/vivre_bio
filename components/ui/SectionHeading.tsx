@@ -18,8 +18,9 @@ export default function SectionHeading({
   return (
     <div className={`flex flex-col gap-3 ${alignment}`}>
       {eyebrow && (
-        <span className="font-accent text-2xl text-secondary">{eyebrow}</span>
+        <span className="font-accent text-3xl sm:text-4xl text-secondary">{eyebrow}</span>
       )}
+      <span className="h-1 w-12 rounded-full bg-secondary" aria-hidden="true" />
       <Heading className="font-sans font-bold text-3xl sm:text-4xl text-base-content">
         {title}
       </Heading>

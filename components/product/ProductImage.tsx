@@ -26,7 +26,7 @@ export default function ProductImage({
         fill
         sizes={sizes}
         priority={priority}
-        className="object-cover"
+        className="object-contain p-4 transition-transform duration-300 group-hover:scale-105"
       />
     </div>
   );

@@ -76,7 +76,7 @@ export default async function AdminOrderDetailPage({
         </div>
       </div>
 
-      <form action={changeOrderStatus} className="flex items-end gap-3">
+      <form action={changeOrderStatus} className="flex items-end gap-3 mb-8">
         <input type="hidden" name="orderId" value={order.id} />
         <div className="flex flex-col gap-1">
           <label htmlFor="status" className="font-medium text-sm">
@@ -86,7 +86,7 @@ export default async function AdminOrderDetailPage({
             id="status"
             name="status"
             defaultValue={order.status}
-            className="select select-bordered"
+            className="select border border-base-300"
           >
             {ORDER_STATUS_SEQUENCE.map((status) => (
               <option key={status} value={status}>
@@ -99,6 +99,26 @@ export default async function AdminOrderDetailPage({
           Mettre à jour
         </button>
       </form>
+
+      <div>
+        <h2 className="font-semibold mb-4">Historique</h2>
+        <ul className="flex flex-col gap-3">
+          {order.statusHistory.map((entry, index) => (
+            <li key={`${entry.status}-${entry.changedAt}`} className="flex items-center gap-3 text-sm">
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  index === order.statusHistory.length - 1 ? "bg-primary" : "bg-base-300"
+                }`}
+                aria-hidden="true"
+              />
+              <span className="font-medium">{ORDER_STATUS_LABELS[entry.status]}</span>
+              <span className="text-base-content/60">
+                {new Date(entry.changedAt).toLocaleString("fr-FR")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @plugin "daisyui" {
-  themes: vivrebio --default;
+  themes: vivrebio --default, vivrebio-dark;
 }
 
 @plugin "daisyui/theme" {
@@ -44,6 +44,46 @@
   --radius-box: 0.75rem;
 }
 
+@plugin "daisyui/theme" {
+  name: "vivrebio-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #14201A;
+  --color-base-200: #1C2B22;
+  --color-base-300: #2A3D30;
+  --color-base-content: #EAF1EA;
+
+  --color-primary: #2E7D32;
+  --color-primary-content: #FFFFFF;
+
+  --color-secondary: #7CB342;
+  --color-secondary-content: #FFFFFF;
+
+  --color-accent: #E31E24;
+  --color-accent-content: #FFFFFF;
+
+  --color-neutral: #0B120D;
+  --color-neutral-content: #FFFFFF;
+
+  --color-info: #3ABFF8;
+  --color-info-content: #FFFFFF;
+
+  --color-success: #2E7D32;
+  --color-success-content: #FFFFFF;
+
+  --color-warning: #F5A524;
+  --color-warning-content: #1E2A1F;
+
+  --color-error: #E31E24;
+  --color-error-content: #FFFFFF;
+
+  --radius-selector: 0.5rem;
+  --radius-field: 0.25rem;
+  --radius-box: 0.75rem;
+}
+
 @theme {
   --font-sans: var(--font-poppins), sans-serif;
   --font-accent: var(--font-great-vibes), cursive;
@@ -51,4 +91,105 @@
 
 body {
   font-family: var(--font-sans);
+}
+
+@keyframes cart-badge-pop {
+  0% {
+    transform: scale(1.4);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes ambient-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(24px, -18px) scale(1.08);
+  }
+}
+
+.ambient-glow {
+  animation: ambient-drift 16s ease-in-out infinite;
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .animate-\[cart-badge-pop_300ms_ease-out\] {
+    animation: none;
+  }
+
+  .ambient-glow {
+    animation: none;
+  }
+}
+
+/*
+ * Styles minimalistes pour le HTML des articles de blog (généré par
+ * RichTextEditor côté admin, assaini avant stockage — voir
+ * app/admin/articles/actions.ts). Pas de plugin Tailwind Typography pour
+ * une liste de balises aussi restreinte, un peu de CSS ciblé suffit.
+ */
+.article-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.article-content h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.article-content h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.article-content h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.article-content ul {
+  list-style: disc;
+  padding-left: 1.5rem;
+}
+
+.article-content ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+}
+
+.article-content blockquote {
+  border-left: 3px solid var(--color-primary);
+  padding-left: 1rem;
+  font-style: italic;
+  color: color-mix(in oklab, var(--color-base-content) 70%, transparent);
+}
+
+.article-content a {
+  color: var(--color-primary);
+  text-decoration: underline;
 }

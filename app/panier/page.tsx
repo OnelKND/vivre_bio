@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { getAllProducts } from "@/lib/products";
 import CartPageClient from "./CartPageClient";
+
+// Le catalogue vit en base et peut changer à tout moment depuis l'admin.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Votre panier",
@@ -8,5 +12,6 @@ export const metadata: Metadata = {
 };
 
 export default function CartPage() {
-  return <CartPageClient />;
+  const products = getAllProducts();
+  return <CartPageClient products={products} />;
 }

@@ -41,12 +41,20 @@ node_modules/
 .node_repl_history
 .vscode-test
 
+# Next.js
+/.next/
+/.next-build/
+/out/
+
+# production
+/build
+
 # Build outputs
 .cache
 .vite/
 .next
 /out/
-/build
+.build
 /.vercel
 
 # Tools
@@ -82,14 +90,14 @@ npm-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-# base de données SQLite locale (commandes)
+# Base de données SQLite locale (commandes)
 /data/*.db
+
+# Sauvegardes locales de la base (voir scripts/backup-db.sh)
+/backups/
+
+# Journaux de sécurité (voir lib/security-log.ts)
+/logs/
 
 # TypeScript
 *.tsbuildinfo

@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { getAllProducts } from "@/lib/products";
 import CheckoutPageClient from "./CheckoutPageClient";
+
+// Le catalogue vit en base et peut changer à tout moment depuis l'admin.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Passer la commande",
@@ -9,5 +13,6 @@ export const metadata: Metadata = {
 };
 
 export default function CheckoutPage() {
-  return <CheckoutPageClient />;
+  const products = getAllProducts();
+  return <CheckoutPageClient products={products} />;
 }
