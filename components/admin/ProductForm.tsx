@@ -172,7 +172,7 @@ export default function ProductForm({
                 }
                 className="checkbox checkbox-secondary"
               />
-              <span className="text-sm">Supprimer l'image actuelle</span>
+              <span className="text-sm">Supprimer l&apos;image actuelle</span>
             </label>
           </div>
         )}

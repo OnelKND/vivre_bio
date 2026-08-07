@@ -100,17 +100,6 @@ async function saveCoverImage(
   return { imagePath: `/blog/${filename}` };
 }
 
-async function deleteCoverImageFile(imagePath: string): Promise<void> {
-  if (!imagePath.startsWith("/blog/")) return;
-
-  const filePath = path.join(process.cwd(), "public", imagePath.replace(/^\//, ""));
-  try {
-    await unlink(filePath);
-  } catch {
-    // ignore missing file
-  }
-}
-
 async function deleteAllCoverImagesForSlug(slug: string): Promise<void> {
   const publicDir = path.join(process.cwd(), "public", "blog");
 
@@ -128,7 +117,7 @@ async function deleteAllCoverImagesForSlug(slug: string): Promise<void> {
         })
     );
   } catch {
-    // ignore if folder missing
+    // ignore missing directory or unreadable folder
   }
 }
 

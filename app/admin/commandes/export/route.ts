@@ -5,7 +5,6 @@ import {
   ORDER_STATUS_LABELS,
   type OrderStatus,
 } from "@/lib/orders";
-import { formatFCFA } from "@/lib/format";
 
 // Jamais mis en cache : c'est un export de données à la demande.
 export const dynamic = "force-dynamic";

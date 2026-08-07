@@ -139,7 +139,7 @@ export async function createProductAction(
 
   const featured = formData.get("featured") === "on";
 
-  const product = createProduct(slug, { ...parsed.data, image: imagePath, featured });
+  createProduct(slug, { ...parsed.data, image: imagePath, featured });
 
   revalidatePath("/");
   revalidatePath("/catalogue");
@@ -203,8 +203,7 @@ export async function updateProductAction(
   revalidatePath(`/produits/${existing.slug}`);
   revalidatePath("/admin/produits");
   redirect(
-    `/admin/produits?updated=${encodeURIComponent(parsed.data.name)}${q ? `&q=${encodeURIComponent(q)}` : ""
-    }`
+    `/admin/produits?updated=${encodeURIComponent(parsed.data.name)}${q ? `&q=${encodeURIComponent(q)}` : ""}`
   );
 }
 
@@ -227,7 +226,6 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
   revalidatePath("/catalogue");
   revalidatePath("/admin/produits");
   redirect(
-    `/admin/produits?deleted=${encodeURIComponent(existing.name)}${q ? `&q=${encodeURIComponent(q)}` : ""
-    }`
+    `/admin/produits?deleted=${encodeURIComponent(existing.name)}${q ? `&q=${encodeURIComponent(q)}` : ""}`
   );
 }
