@@ -1,10 +1,33 @@
 import "server-only";
 import { DatabaseSync } from "node:sqlite";
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "vivrebio.db");
+const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
+const LOCAL_DB_PATH = path.join(LOCAL_DATA_DIR, "vivrebio.db");
+const TMP_DB_PATH = path.join(os.tmpdir(), "vivrebio.db");
+
+/**
+ * Choisit où créer le fichier SQLite selon l'environnement :
+ * - Sur Netlify (et tout serverless read-only) → `/tmp/vivrebio.db`, le seul
+ *   emplacement writable des Lambda.
+ * - En local → `data/vivrebio.db` à la racine du projet (workflow de dev).
+ * - Fallback `/tmp` si jamais le dossier local n'est pas accessible
+ *   (CI, conteneur read-only, etc.) plutôt que de crasher.
+ */
+function resolveDbPath(): string {
+  if (process.env.NETLIFY === "true") return TMP_DB_PATH;
+  try {
+    fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
+    fs.accessSync(LOCAL_DATA_DIR, fs.constants.W_OK);
+    return LOCAL_DB_PATH;
+  } catch {
+    return TMP_DB_PATH;
+  }
+}
+
+const DB_PATH = resolveDbPath();
 
 declare global {
   var __vivrebioDb: DatabaseSync | undefined;
@@ -134,7 +157,9 @@ const SEED_PRODUCTS = [
 ] as const;
 
 function createDatabase(): DatabaseSync {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+  // Le dossier parent de DB_PATH est garanti writable par resolveDbPath()
+  // (LOCAL_DATA_DIR testé en local, os.tmpdir() toujours writable sur
+  // serverless). On n'a donc plus besoin de mkdirSync ici.
   const database = new DatabaseSync(DB_PATH);
   database.exec(`
     CREATE TABLE IF NOT EXISTS orders (
