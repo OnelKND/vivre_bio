@@ -137,7 +137,7 @@ export async function createProductAction(
     };
   }
 
-  const slug = generateProductSlug(parsed.data.name);
+  const slug = await generateProductSlug(parsed.data.name);
 
   const imageFile = formData.get("image");
   let imagePath: string;
@@ -153,7 +153,7 @@ export async function createProductAction(
 
   const featured = formData.get("featured") === "on";
 
-  createProduct(slug, { ...parsed.data, image: imagePath, featured });
+  await createProduct(slug, { ...parsed.data, image: imagePath, featured });
 
   revalidatePath("/");
   revalidatePath("/catalogue");
@@ -170,7 +170,7 @@ export async function updateProductAction(
   }
 
   const id = Number(formData.get("id"));
-  const existing = Number.isFinite(id) ? getProductById(id) : undefined;
+  const existing = Number.isFinite(id) ? await getProductById(id) : undefined;
   if (!existing) {
     return { status: "error", message: "Produit introuvable." };
   }
@@ -212,7 +212,7 @@ export async function updateProductAction(
     imagePath = await savePlaceholderImage(parsed.data.name, existing.slug);
   }
 
-  updateProduct(id, { ...parsed.data, image: imagePath, featured });
+  await updateProduct(id, { ...parsed.data, image: imagePath, featured });
 
   revalidatePath("/");
   revalidatePath("/catalogue");
@@ -241,7 +241,7 @@ export async function bulkUpdateWhatsappLinksAction(
     return { status: "error", message: "Session expirée, reconnectez-vous." };
   }
 
-  const products = getAllProducts();
+  const products = await getAllProducts();
   let updated = 0;
   const skipped: string[] = [];
 
@@ -258,7 +258,7 @@ export async function bulkUpdateWhatsappLinksAction(
     const nextValue = value === "" ? null : value;
     if (nextValue === product.whatsappCatalogUrl) continue;
 
-    updateProductWhatsappLink(product.id, nextValue);
+    await updateProductWhatsappLink(product.id, nextValue);
     updated += 1;
   }
 
@@ -285,12 +285,12 @@ export async function deleteProductAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
 
-  const existing = getProductById(id);
+  const existing = await getProductById(id);
   if (!existing) return;
 
   const q = String(formData.get("q") ?? "").trim();
 
-  deleteProduct(id);
+  await deleteProduct(id);
 
   revalidatePath("/");
   revalidatePath("/catalogue");

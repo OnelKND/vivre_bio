@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function CheckoutPage() {
-  const products = getAllProducts();
+export default async function CheckoutPage() {
+  const products = await getAllProducts();
   return <CheckoutPageClient products={products} />;
 }

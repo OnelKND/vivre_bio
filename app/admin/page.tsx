@@ -43,14 +43,14 @@ export default async function AdminDashboardPage({
   const page = Math.max(1, Number(pageParam) || 1);
   const status = statut && statut !== "toutes" ? (statut as OrderStatus) : undefined;
 
-  const { orders, total } = listOrders({
+  const { orders, total } = await listOrders({
     status,
     query: q,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pendingReviewsCount = getAllReviews().filter(
+  const pendingReviewsCount = (await getAllReviews()).filter(
     (review) => review.status === "en_attente"
   ).length;
 

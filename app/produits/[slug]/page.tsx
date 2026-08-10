@@ -25,7 +25,7 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) return {};
 
   return {
@@ -45,13 +45,13 @@ export default async function ProductPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlug(slug);
   if (!product) notFound();
 
   const category = getCategoryBySlug(product.category);
-  const reviews = getApprovedReviews(product.slug);
-  const reviewStats = getReviewStats(product.slug);
-  const relatedProducts = getProductsByCategory(product.category)
+  const reviews = await getApprovedReviews(product.slug);
+  const reviewStats = await getReviewStats(product.slug);
+  const relatedProducts = (await getProductsByCategory(product.category))
     .filter((related) => related.slug !== product.slug)
     .slice(0, 4);
   // Si l'admin a renseigné le lien de l'article dans le catalogue WhatsApp

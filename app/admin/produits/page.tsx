@@ -22,7 +22,7 @@ export default async function AdminProductsPage({
   const categories = getAllCategories();
   const categoryNames = new Map(categories.map((category) => [category.slug, category.name]));
 
-  const allProducts = getAllProducts();
+  const allProducts = await getAllProducts();
   const query = q?.trim().toLowerCase();
   const products = query
     ? allProducts.filter(

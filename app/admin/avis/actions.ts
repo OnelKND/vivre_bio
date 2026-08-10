@@ -15,10 +15,10 @@ export async function approveReviewAction(formData: FormData): Promise<void> {
   if (!(await hasValidAdminSession())) return;
 
   const id = Number(formData.get("id"));
-  const existing = Number.isFinite(id) ? getReviewById(id) : undefined;
+  const existing = Number.isFinite(id) ? await getReviewById(id) : undefined;
   if (!existing) return;
 
-  approveReview(id);
+  await approveReview(id);
 
   revalidatePath(`/produits/${existing.productSlug}`);
   revalidatePath("/admin/avis");
@@ -29,10 +29,10 @@ export async function deleteReviewAction(formData: FormData): Promise<void> {
   if (!(await hasValidAdminSession())) return;
 
   const id = Number(formData.get("id"));
-  const existing = Number.isFinite(id) ? getReviewById(id) : undefined;
+  const existing = Number.isFinite(id) ? await getReviewById(id) : undefined;
   if (!existing) return;
 
-  deleteReview(id);
+  await deleteReview(id);
 
   revalidatePath(`/produits/${existing.productSlug}`);
   revalidatePath("/admin/avis");

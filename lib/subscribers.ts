@@ -20,22 +20,23 @@ function rowToSubscriber(row: SubscriberRow): Subscriber {
 export type CreateSubscriberResult = "created" | "already_subscribed";
 
 /** Insertion idempotente : un email déjà inscrit ne provoque pas d'erreur. */
-export function createSubscriber(email: string): CreateSubscriberResult {
-  const db = getDb();
-  const existing = db.prepare("SELECT id FROM subscribers WHERE email = ?").get(email);
-  if (existing) return "already_subscribed";
+export async function createSubscriber(email: string): Promise<CreateSubscriberResult> {
+  const db = await getDb();
+  const existing = await db.execute({
+    sql: "SELECT id FROM subscribers WHERE email = ?",
+    args: [email],
+  });
+  if (existing.rows.length > 0) return "already_subscribed";
 
-  db.prepare("INSERT INTO subscribers (email, created_at) VALUES (?, ?)").run(
-    email,
-    new Date().toISOString()
-  );
+  await db.execute({
+    sql: "INSERT INTO subscribers (email, created_at) VALUES (?, ?)",
+    args: [email, new Date().toISOString()],
+  });
   return "created";
 }
 
-export function getAllSubscribers(): Subscriber[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM subscribers ORDER BY created_at DESC")
-    .all() as unknown as SubscriberRow[];
-  return rows.map(rowToSubscriber);
+export async function getAllSubscribers(): Promise<Subscriber[]> {
+  const db = await getDb();
+  const result = await db.execute("SELECT * FROM subscribers ORDER BY created_at DESC");
+  return result.rows.map((row) => rowToSubscriber(row as unknown as SubscriberRow));
 }

@@ -13,8 +13,8 @@ export const metadata: Metadata = {
   description: "Conseils, actualités et coulisses de VIVRE BIO autour des plantes et du naturel.",
 };
 
-export default function BlogPage() {
-  const articles = getPublishedArticles();
+export default async function BlogPage() {
+  const articles = await getPublishedArticles();
 
   return (
     <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">

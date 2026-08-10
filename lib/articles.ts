@@ -53,79 +53,85 @@ function rowToArticle(row: ArticleRow): Article {
   };
 }
 
-export function getAllArticles(): Article[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM articles ORDER BY created_at DESC")
-    .all() as unknown as ArticleRow[];
-  return rows.map(rowToArticle);
+export async function getAllArticles(): Promise<Article[]> {
+  const db = await getDb();
+  const result = await db.execute("SELECT * FROM articles ORDER BY created_at DESC");
+  return result.rows.map((row) => rowToArticle(row as unknown as ArticleRow));
 }
 
-export function getPublishedArticles(): Article[] {
-  const db = getDb();
-  const rows = db
-    .prepare("SELECT * FROM articles WHERE status = 'publie' ORDER BY published_at DESC")
-    .all() as unknown as ArticleRow[];
-  return rows.map(rowToArticle);
+export async function getPublishedArticles(): Promise<Article[]> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM articles WHERE status = 'publie' ORDER BY published_at DESC",
+  });
+  return result.rows.map((row) => rowToArticle(row as unknown as ArticleRow));
 }
 
-export function getArticleBySlug(slug: string): Article | undefined {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM articles WHERE slug = ?").get(slug) as
-    | ArticleRow
-    | undefined;
-  return row ? rowToArticle(row) : undefined;
+export async function getArticleBySlug(slug: string): Promise<Article | undefined> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM articles WHERE slug = ?",
+    args: [slug],
+  });
+  const row = result.rows[0];
+  return row ? rowToArticle(row as unknown as ArticleRow) : undefined;
 }
 
-export function getArticleById(id: number): Article | undefined {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM articles WHERE id = ?").get(id) as
-    | ArticleRow
-    | undefined;
-  return row ? rowToArticle(row) : undefined;
+export async function getArticleById(id: number): Promise<Article | undefined> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM articles WHERE id = ?",
+    args: [id],
+  });
+  const row = result.rows[0];
+  return row ? rowToArticle(row as unknown as ArticleRow) : undefined;
 }
 
 /** Dérive un slug unique à partir du titre, en ajoutant -2/-3/... en cas de collision. */
-function uniqueSlug(base: string): string {
-  const db = getDb();
+async function uniqueSlug(base: string): Promise<string> {
+  const db = await getDb();
   const root = base || "article";
   let candidate = root;
   let suffix = 2;
   for (;;) {
-    const existing = db.prepare("SELECT id FROM articles WHERE slug = ?").get(candidate);
-    if (!existing) return candidate;
+    const result = await db.execute({
+      sql: "SELECT id FROM articles WHERE slug = ?",
+      args: [candidate],
+    });
+    if (result.rows.length === 0) return candidate;
     candidate = `${root}-${suffix}`;
     suffix += 1;
   }
 }
 
-export function generateArticleSlug(title: string): string {
+export async function generateArticleSlug(title: string): Promise<string> {
   return uniqueSlug(slugify(title));
 }
 
-export function createArticle(slug: string, input: ArticleInput): Article {
-  const db = getDb();
+export async function createArticle(slug: string, input: ArticleInput): Promise<Article> {
+  const db = await getDb();
   const now = new Date().toISOString();
   const publishedAt = input.status === "publie" ? now : null;
 
-  const statement = db.prepare(`
-    INSERT INTO articles (
+  const result = await db.execute({
+    sql: `INSERT INTO articles (
       slug, title, excerpt, content, cover_image, status, published_at, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-  const result = statement.run(
-    slug,
-    input.title,
-    input.excerpt,
-    input.content,
-    input.coverImage,
-    input.status,
-    publishedAt,
-    now,
-    now
-  );
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    args: [
+      slug,
+      input.title,
+      input.excerpt,
+      input.content,
+      input.coverImage,
+      input.status,
+      publishedAt,
+      now,
+      now,
+    ],
+  });
 
-  const article = getArticleById(Number(result.lastInsertRowid));
+  const id = Number(result.lastInsertRowid);
+  const article = await getArticleById(id);
   if (!article) throw new Error("Échec de la création de l'article.");
   return article;
 }
@@ -135,34 +141,35 @@ export function createArticle(slug: string, input: ArticleInput): Article {
  * positionné que la première fois que l'article passe à "publie" — il
  * reste stable même en cas de dépublication/republication ultérieure.
  */
-export function updateArticle(id: number, input: ArticleInput): Article | undefined {
-  const db = getDb();
-  const existing = getArticleById(id);
+export async function updateArticle(id: number, input: ArticleInput): Promise<Article | undefined> {
+  const db = await getDb();
+  const existing = await getArticleById(id);
   if (!existing) return undefined;
 
   const now = new Date().toISOString();
   const publishedAt =
     input.status === "publie" && !existing.publishedAt ? now : existing.publishedAt;
 
-  db.prepare(`
-    UPDATE articles SET
+  await db.execute({
+    sql: `UPDATE articles SET
       title = ?, excerpt = ?, content = ?, cover_image = ?, status = ?,
       published_at = ?, updated_at = ?
-    WHERE id = ?
-  `).run(
-    input.title,
-    input.excerpt,
-    input.content,
-    input.coverImage,
-    input.status,
-    publishedAt,
-    now,
-    id
-  );
+    WHERE id = ?`,
+    args: [
+      input.title,
+      input.excerpt,
+      input.content,
+      input.coverImage,
+      input.status,
+      publishedAt,
+      now,
+      id,
+    ],
+  });
   return getArticleById(id);
 }
 
-export function deleteArticle(id: number): void {
-  const db = getDb();
-  db.prepare("DELETE FROM articles WHERE id = ?").run(id);
+export async function deleteArticle(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute({ sql: "DELETE FROM articles WHERE id = ?", args: [id] });
 }

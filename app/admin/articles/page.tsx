@@ -18,7 +18,7 @@ export default async function AdminArticlesPage({
   searchParams: Promise<{ q?: string }>;
 }) {
   const { q } = await searchParams;
-  const allArticles = getAllArticles();
+  const allArticles = await getAllArticles();
   const query = q?.trim().toLowerCase();
   const articles = query
     ? allArticles.filter((article) => article.title.toLowerCase().includes(query))

@@ -159,7 +159,7 @@ export async function createArticleAction(
     };
   }
 
-  const slug = generateArticleSlug(parsed.data.title);
+  const slug = await generateArticleSlug(parsed.data.title);
 
   const imageFile = formData.get("coverImage");
   let coverImage: string;
@@ -173,7 +173,7 @@ export async function createArticleAction(
     coverImage = await savePlaceholderImage(parsed.data.title, slug);
   }
 
-  const article = createArticle(slug, {
+  const article = await createArticle(slug, {
     title: parsed.data.title,
     excerpt: parsed.data.excerpt,
     content: sanitizeArticleContent(parsed.data.content),
@@ -195,7 +195,7 @@ export async function updateArticleAction(
   }
 
   const id = Number(formData.get("id"));
-  const existing = Number.isFinite(id) ? getArticleById(id) : undefined;
+  const existing = Number.isFinite(id) ? await getArticleById(id) : undefined;
   if (!existing) {
     return { status: "error", message: "Article introuvable." };
   }
@@ -219,7 +219,7 @@ export async function updateArticleAction(
     coverImage = imagePath;
   }
 
-  updateArticle(id, {
+  await updateArticle(id, {
     title: parsed.data.title,
     excerpt: parsed.data.excerpt,
     content: sanitizeArticleContent(parsed.data.content),
@@ -239,11 +239,11 @@ export async function togglePublishAction(formData: FormData): Promise<void> {
   }
 
   const id = Number(formData.get("id"));
-  const existing = Number.isFinite(id) ? getArticleById(id) : undefined;
+  const existing = Number.isFinite(id) ? await getArticleById(id) : undefined;
   if (!existing) return;
 
   const nextStatus: ArticleStatus = existing.status === "publie" ? "brouillon" : "publie";
-  updateArticle(id, {
+  await updateArticle(id, {
     title: existing.title,
     excerpt: existing.excerpt,
     content: existing.content,
@@ -267,10 +267,10 @@ export async function deleteArticleAction(formData: FormData): Promise<void> {
   const id = Number(formData.get("id"));
   if (!Number.isFinite(id)) return;
 
-  const existing = getArticleById(id);
+  const existing = await getArticleById(id);
   if (!existing) return;
 
-  deleteArticle(id);
+  await deleteArticle(id);
 
   revalidatePath("/blog");
   revalidatePath("/admin/articles");

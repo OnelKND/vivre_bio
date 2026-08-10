@@ -47,90 +47,86 @@ function rowToReview(row: ReviewRow): Review {
   };
 }
 
-export function getApprovedReviews(productSlug: string): Review[] {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      "SELECT * FROM reviews WHERE product_slug = ? AND status = 'approuve' ORDER BY created_at DESC"
-    )
-    .all(productSlug) as unknown as ReviewRow[];
-  return rows.map(rowToReview);
+export async function getApprovedReviews(productSlug: string): Promise<Review[]> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM reviews WHERE product_slug = ? AND status = 'approuve' ORDER BY created_at DESC",
+    args: [productSlug],
+  });
+  return result.rows.map((row) => rowToReview(row as unknown as ReviewRow));
 }
 
-export function getReviewStats(productSlug: string): ReviewStats {
-  const db = getDb();
-  const row = db
-    .prepare(
-      "SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE product_slug = ? AND status = 'approuve'"
-    )
-    .get(productSlug) as { average: number | null; count: number };
+export async function getReviewStats(productSlug: string): Promise<ReviewStats> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE product_slug = ? AND status = 'approuve'",
+    args: [productSlug],
+  });
+  const row = result.rows[0] as unknown as { average: number | null; count: number };
   return { average: row.average ?? 0, count: row.count };
 }
 
 /** Note moyenne et nombre total d'avis approuvés, tous produits confondus (preuve sociale sur la home). */
-export function getSiteReviewStats(): ReviewStats {
-  const db = getDb();
-  const row = db
-    .prepare("SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE status = 'approuve'")
-    .get() as { average: number | null; count: number };
+export async function getSiteReviewStats(): Promise<ReviewStats> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE status = 'approuve'",
+  });
+  const row = result.rows[0] as unknown as { average: number | null; count: number };
   return { average: row.average ?? 0, count: row.count };
 }
 
 /** Avis les mieux notés, tous produits confondus, pour une mise en avant sur la home. */
-export function getFeaturedReviews(limit: number): (Review & { productSlug: string })[] {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      "SELECT * FROM reviews WHERE status = 'approuve' AND rating >= 4 ORDER BY rating DESC, created_at DESC LIMIT ?"
-    )
-    .all(limit) as unknown as ReviewRow[];
-  return rows.map(rowToReview);
+export async function getFeaturedReviews(limit: number): Promise<(Review & { productSlug: string })[]> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM reviews WHERE status = 'approuve' AND rating >= 4 ORDER BY rating DESC, created_at DESC LIMIT ?",
+    args: [limit],
+  });
+  return result.rows.map((row) => rowToReview(row as unknown as ReviewRow));
 }
 
 /** Admin : tous les avis, tous produits, en attente en premier. */
-export function getAllReviews(): Review[] {
-  const db = getDb();
-  const rows = db
-    .prepare(
-      "SELECT * FROM reviews ORDER BY (status = 'en_attente') DESC, created_at DESC"
-    )
-    .all() as unknown as ReviewRow[];
-  return rows.map(rowToReview);
+export async function getAllReviews(): Promise<Review[]> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM reviews ORDER BY (status = 'en_attente') DESC, created_at DESC",
+  });
+  return result.rows.map((row) => rowToReview(row as unknown as ReviewRow));
 }
 
-export function getReviewById(id: number): Review | undefined {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM reviews WHERE id = ?").get(id) as
-    | ReviewRow
-    | undefined;
-  return row ? rowToReview(row) : undefined;
+export async function getReviewById(id: number): Promise<Review | undefined> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM reviews WHERE id = ?",
+    args: [id],
+  });
+  const row = result.rows[0];
+  return row ? rowToReview(row as unknown as ReviewRow) : undefined;
 }
 
-export function createReview(input: ReviewInput): Review {
-  const db = getDb();
+export async function createReview(input: ReviewInput): Promise<Review> {
+  const db = await getDb();
   const now = new Date().toISOString();
-  const statement = db.prepare(`
-    INSERT INTO reviews (product_slug, author_name, rating, comment, status, created_at)
-    VALUES (?, ?, ?, ?, 'en_attente', ?)
-  `);
-  const result = statement.run(
-    input.productSlug,
-    input.authorName,
-    input.rating,
-    input.comment,
-    now
-  );
-  const review = getReviewById(Number(result.lastInsertRowid));
+  const result = await db.execute({
+    sql: `INSERT INTO reviews (product_slug, author_name, rating, comment, status, created_at)
+      VALUES (?, ?, ?, ?, 'en_attente', ?)`,
+    args: [input.productSlug, input.authorName, input.rating, input.comment, now],
+  });
+  const review = await getReviewById(Number(result.lastInsertRowid));
   if (!review) throw new Error("Échec de la création de l'avis.");
   return review;
 }
 
-export function approveReview(id: number): void {
-  const db = getDb();
-  db.prepare("UPDATE reviews SET status = 'approuve' WHERE id = ?").run(id);
+export async function approveReview(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute({
+    sql: "UPDATE reviews SET status = 'approuve' WHERE id = ?",
+    args: [id],
+  });
 }
 
-export function deleteReview(id: number): void {
-  const db = getDb();
-  db.prepare("DELETE FROM reviews WHERE id = ?").run(id);
+export async function deleteReview(id: number): Promise<void> {
+  const db = await getDb();
+  await db.execute({ sql: "DELETE FROM reviews WHERE id = ?", args: [id] });
 }

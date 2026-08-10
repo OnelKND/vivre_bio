@@ -10,9 +10,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:turso": "jiti scripts/seed-turso.mjs"
   },
   "dependencies": {
+    "@libsql/client": "^0.17.4",
     "@tiptap/pm": "^3.29.2",
     "@tiptap/react": "^3.29.2",
     "@tiptap/starter-kit": "^3.29.2",

@@ -18,7 +18,7 @@ const STATIC_ROUTES = [
   "/conditions-generales-vente",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
   const staticEntries: MetadataRoute.Sitemap = STATIC_ROUTES.map((route) => ({
@@ -28,7 +28,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: route === "" ? 1 : 0.6,
   }));
 
-  const productEntries: MetadataRoute.Sitemap = getAllProducts().map(
+  const productEntries: MetadataRoute.Sitemap = (await getAllProducts()).map(
     (product) => ({
       url: `${SITE_URL}/produits/${product.slug}`,
       lastModified: now,
@@ -37,7 +37,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     })
   );
 
-  const articleEntries: MetadataRoute.Sitemap = getPublishedArticles().map(
+  const articleEntries: MetadataRoute.Sitemap = (await getPublishedArticles()).map(
     (article) => ({
       url: `${SITE_URL}/blog/${article.slug}`,
       lastModified: article.publishedAt ? new Date(article.publishedAt) : now,

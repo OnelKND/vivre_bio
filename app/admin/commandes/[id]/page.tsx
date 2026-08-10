@@ -22,7 +22,7 @@ export default async function AdminOrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = getOrderById(Number(id));
+  const order = await getOrderById(Number(id));
   if (!order) notFound();
 
   const whatsappHref = buildWhatsAppLink(

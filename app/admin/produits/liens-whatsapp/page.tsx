@@ -10,8 +10,8 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function AdminWhatsappLinksPage() {
-  const products = getAllProducts();
+export default async function AdminWhatsappLinksPage() {
+  const products = await getAllProducts();
 
   return (
     <div className="mx-auto max-w-4xl px-4 sm:px-6 py-12">

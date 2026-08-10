@@ -45,7 +45,7 @@ export async function submitReviewAction(
     };
   }
 
-  if (!getProductBySlug(parsed.data.productSlug)) {
+  if (!(await getProductBySlug(parsed.data.productSlug))) {
     return { status: "error", message: "Produit introuvable." };
   }
 
@@ -72,7 +72,7 @@ export async function submitReviewAction(
     rating: parsed.data.rating,
     comment: parsed.data.comment,
   };
-  createReview(input);
+  await createReview(input);
 
   revalidatePath("/admin/avis");
 

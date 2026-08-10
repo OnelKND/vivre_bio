@@ -6,10 +6,10 @@ export interface CartItemInput {
   quantity: number;
 }
 
-export function computeOrderItems(cartItems: CartItemInput[]): OrderItemRecord[] {
+export async function computeOrderItems(cartItems: CartItemInput[]): Promise<OrderItemRecord[]> {
   const items: OrderItemRecord[] = [];
   for (const line of cartItems) {
-    const product = getProductBySlug(line.slug);
+    const product = await getProductBySlug(line.slug);
     if (!product) continue;
     items.push({
       slug: product.slug,

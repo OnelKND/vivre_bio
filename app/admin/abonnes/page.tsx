@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function AdminSubscribersPage() {
-  const subscribers = getAllSubscribers();
+export default async function AdminSubscribersPage() {
+  const subscribers = await getAllSubscribers();
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">

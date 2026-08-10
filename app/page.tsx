@@ -15,16 +15,19 @@ import VideoShowcase from "@/components/ui/VideoShowcase";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+export default async function HomePage() {
   const categories = getAllCategories();
-  const featuredProducts = getFeaturedProducts();
-  const reviewStats = getSiteReviewStats();
-  const featuredReviews = getFeaturedReviews(3).map((review) => ({
-    ...review,
-    productName: getProductBySlug(review.productSlug)?.name,
-  }));
+  const featuredProducts = await getFeaturedProducts();
+  const reviewStats = await getSiteReviewStats();
+  const rawFeaturedReviews = await getFeaturedReviews(3);
+  const featuredReviews = await Promise.all(
+    rawFeaturedReviews.map(async (review) => ({
+      ...review,
+      productName: (await getProductBySlug(review.productSlug))?.name,
+    }))
+  );
   const STATS = [
-    { value: `${getAllProducts().length}+`, label: "Produits naturels" },
+    { value: `${(await getAllProducts()).length}+`, label: "Produits naturels" },
     { value: `${getAllDeliveryZones().length}`, label: "Zones livrées au Bénin" },
     { value: "100%", label: "Artisanal, made in BENIN" },
   ];

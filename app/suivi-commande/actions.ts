@@ -37,7 +37,7 @@ export async function trackOrderAction(
     return { status: "error", message: "Merci d'indiquer un numéro de commande et un téléphone valides." };
   }
 
-  const order = getOrderForTracking(parsed.data.orderId, parsed.data.phone);
+  const order = await getOrderForTracking(parsed.data.orderId, parsed.data.phone);
   if (!order) {
     return {
       status: "error",

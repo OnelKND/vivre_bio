@@ -20,8 +20,8 @@ export default async function CataloguePage({
   const { categorie, q } = await searchParams;
   const category = categorie ? getCategoryBySlug(categorie) : undefined;
   const baseProducts = category
-    ? getProductsByCategory(category.slug)
-    : getAllProducts();
+    ? await getProductsByCategory(category.slug)
+    : await getAllProducts();
 
   const query = q?.trim().toLowerCase();
   const products = query

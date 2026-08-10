@@ -70,7 +70,7 @@ export async function createOrder(
   // On ne fait jamais confiance aux prix envoyés par le client : les prix et
   // le tarif de livraison sont relus depuis le catalogue et les zones de
   // référence, uniquement les slugs/quantités viennent du formulaire.
-  const items = computeOrderItems(parsed.data.cartItems);
+  const items = await computeOrderItems(parsed.data.cartItems);
 
   if (items.length === 0) {
     return {
@@ -83,7 +83,7 @@ export async function createOrder(
   // revalide toujours côté serveur, jamais confiance aux quantités du
   // client — même logique que les prix, déjà relus depuis lib/products.ts.
   for (const item of items) {
-    const product = getProductBySlug(item.slug);
+    const product = await getProductBySlug(item.slug);
     if (!product || product.stock < item.quantity) {
       return {
         status: "error",
@@ -96,7 +96,7 @@ export async function createOrder(
 
   const { subtotal, total } = computeTotals(items, zone.fee);
 
-  const { id: orderId, isNew } = insertOrder({
+  const { id: orderId, isNew } = await insertOrder({
     customerName: parsed.data.customerName,
     phone: parsed.data.phone,
     address: parsed.data.address,
@@ -111,10 +111,10 @@ export async function createOrder(
 
   if (isNew) {
     for (const item of items) {
-      decrementStock(item.slug, item.quantity);
+      await decrementStock(item.slug, item.quantity);
     }
 
-    const order = getOrderById(orderId);
+    const order = await getOrderById(orderId);
     if (order) {
       await sendOrderNotificationEmail(order);
     }

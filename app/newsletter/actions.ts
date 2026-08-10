@@ -47,7 +47,7 @@ export async function subscribeToNewsletter(
     };
   }
 
-  const result = createSubscriber(parsed.data.email.toLowerCase());
+  const result = await createSubscriber(parsed.data.email.toLowerCase());
 
   return {
     status: "success",

@@ -15,7 +15,7 @@ export default async function EditArticlePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const article = getArticleById(Number(id));
+  const article = await getArticleById(Number(id));
   if (!article) notFound();
 
   return (

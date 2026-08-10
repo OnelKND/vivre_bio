@@ -100,45 +100,47 @@ export interface InsertOrderResult {
   isNew: boolean;
 }
 
-export function insertOrder(input: NewOrderInput): InsertOrderResult {
-  const db = getDb();
+export async function insertOrder(input: NewOrderInput): Promise<InsertOrderResult> {
+  const db = await getDb();
 
   if (input.idempotencyKey) {
-    const existing = db
-      .prepare("SELECT id FROM orders WHERE idempotency_key = ?")
-      .get(input.idempotencyKey) as { id: number } | undefined;
-    if (existing) return { id: existing.id, isNew: false };
+    const existing = await db.execute({
+      sql: "SELECT id FROM orders WHERE idempotency_key = ?",
+      args: [input.idempotencyKey],
+    });
+    const row = existing.rows[0] as unknown as { id: number } | undefined;
+    if (row) return { id: row.id, isNew: false };
   }
 
   const now = new Date().toISOString();
   const statusHistory: OrderStatusHistoryEntry[] = [{ status: "recue", changedAt: now }];
 
-  const statement = db.prepare(`
-    INSERT INTO orders (
+  const result = await db.execute({
+    sql: `INSERT INTO orders (
       created_at, customer_name, phone, address,
       delivery_zone_slug, delivery_zone_label, delivery_fee,
       items_json, subtotal, total, status, idempotency_key, status_history
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'recue', ?, ?)
-  `);
-  const result = statement.run(
-    now,
-    input.customerName,
-    input.phone,
-    input.address,
-    input.deliveryZoneSlug,
-    input.deliveryZoneLabel,
-    input.deliveryFee,
-    JSON.stringify(input.items),
-    input.subtotal,
-    input.total,
-    input.idempotencyKey ?? null,
-    JSON.stringify(statusHistory)
-  );
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'recue', ?, ?)`,
+    args: [
+      now,
+      input.customerName,
+      input.phone,
+      input.address,
+      input.deliveryZoneSlug,
+      input.deliveryZoneLabel,
+      input.deliveryFee,
+      JSON.stringify(input.items),
+      input.subtotal,
+      input.total,
+      input.idempotencyKey ?? null,
+      JSON.stringify(statusHistory),
+    ],
+  });
   return { id: Number(result.lastInsertRowid), isNew: true };
 }
 
-export function listOrders(options: ListOrdersOptions = {}): ListOrdersResult {
-  const db = getDb();
+export async function listOrders(options: ListOrdersOptions = {}): Promise<ListOrdersResult> {
+  const db = await getDb();
   const { status, query, limit = 20, offset = 0 } = options;
 
   const conditions: string[] = [];
@@ -155,17 +157,19 @@ export function listOrders(options: ListOrdersOptions = {}): ListOrdersResult {
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const total = (
-    db.prepare(`SELECT COUNT(*) as count FROM orders ${whereClause}`).get(...params) as {
-      count: number;
-    }
-  ).count;
+  const totalResult = await db.execute({
+    sql: `SELECT COUNT(*) as count FROM orders ${whereClause}`,
+    args: params,
+  });
+  const total = Number((totalResult.rows[0] as unknown as { count: number })?.count ?? 0);
 
-  const rows = db
-    .prepare(`SELECT * FROM orders ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`)
-    .all(...params, limit, offset) as unknown as OrderRow[];
+  const rowsResult = await db.execute({
+    sql: `SELECT * FROM orders ${whereClause} ORDER BY id DESC LIMIT ? OFFSET ?`,
+    args: [...params, limit, offset],
+  });
 
-  return { orders: rows.map(rowToOrder), total };
+  const orders = rowsResult.rows.map((row) => rowToOrder(row as unknown as OrderRow));
+  return { orders, total };
 }
 
 export interface ExportOrdersOptions {
@@ -176,12 +180,12 @@ export interface ExportOrdersOptions {
 }
 
 /** Toutes les commandes correspondantes, sans pagination — pour l'export CSV. */
-export function listOrdersForExport(options: ExportOrdersOptions = {}): OrderRecord[] {
-  const db = getDb();
+export async function listOrdersForExport(options: ExportOrdersOptions = {}): Promise<OrderRecord[]> {
+  const db = await getDb();
   const { status, from, to } = options;
 
   const conditions: string[] = [];
-  const params: string[] = [];
+  const params: (string | number)[] = [];
 
   if (status) {
     conditions.push("status = ?");
@@ -198,19 +202,22 @@ export function listOrdersForExport(options: ExportOrdersOptions = {}): OrderRec
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
-  const rows = db
-    .prepare(`SELECT * FROM orders ${whereClause} ORDER BY created_at ASC`)
-    .all(...params) as unknown as OrderRow[];
+  const result = await db.execute({
+    sql: `SELECT * FROM orders ${whereClause} ORDER BY id ASC`,
+    args: params,
+  });
 
-  return rows.map(rowToOrder);
+  return result.rows.map((row) => rowToOrder(row as unknown as OrderRow));
 }
 
-export function getOrderById(id: number): OrderRecord | undefined {
-  const db = getDb();
-  const row = db
-    .prepare("SELECT * FROM orders WHERE id = ?")
-    .get(id) as OrderRow | undefined;
-  return row ? rowToOrder(row) : undefined;
+export async function getOrderById(id: number): Promise<OrderRecord | undefined> {
+  const db = await getDb();
+  const result = await db.execute({
+    sql: "SELECT * FROM orders WHERE id = ?",
+    args: [id],
+  });
+  const row = result.rows[0];
+  return row ? rowToOrder(row as unknown as OrderRow) : undefined;
 }
 
 /**
@@ -228,17 +235,17 @@ function normalizePhone(phone: string): string {
  * id de commande (séquentiel, donc devinable) suffise à consulter les
  * coordonnées d'un autre client.
  */
-export function getOrderForTracking(id: number, phone: string): OrderRecord | undefined {
-  const order = getOrderById(id);
+export async function getOrderForTracking(id: number, phone: string): Promise<OrderRecord | undefined> {
+  const order = await getOrderById(id);
   if (!order) return undefined;
   const providedDigits = normalizePhone(phone);
   if (!providedDigits) return undefined;
   return normalizePhone(order.phone) === providedDigits ? order : undefined;
 }
 
-export function updateOrderStatus(id: number, status: OrderStatus): void {
-  const db = getDb();
-  const existing = getOrderById(id);
+export async function updateOrderStatus(id: number, status: OrderStatus): Promise<void> {
+  const db = await getDb();
+  const existing = await getOrderById(id);
   if (!existing) return;
 
   const statusHistory: OrderStatusHistoryEntry[] = [
@@ -246,9 +253,8 @@ export function updateOrderStatus(id: number, status: OrderStatus): void {
     { status, changedAt: new Date().toISOString() },
   ];
 
-  db.prepare("UPDATE orders SET status = ?, status_history = ? WHERE id = ?").run(
-    status,
-    JSON.stringify(statusHistory),
-    id
-  );
+  await db.execute({
+    sql: "UPDATE orders SET status = ?, status_history = ? WHERE id = ?",
+    args: [status, JSON.stringify(statusHistory), id],
+  });
 }

@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   robots: { index: false },
 };
 
-export default function CartPage() {
-  const products = getAllProducts();
+export default async function CartPage() {
+  const products = await getAllProducts();
   return <CartPageClient products={products} />;
 }

@@ -1,41 +1,30 @@
-import "server-only";
-import fs from "node:fs";
-import path from "node:path";
-import { createClient, type Client } from "@libsql/client";
-
-const LOCAL_DATA_DIR = path.join(process.cwd(), "data");
-const LOCAL_DB_PATH = path.join(LOCAL_DATA_DIR, "vivrebio.db");
-
 /**
- * Sur Netlify (et tout serverless), `process.cwd()/data` n'est pas writable
- * → on bascule sur Turso (libSQL cloud) via les variables d'env
- * `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN`. En local on garde un fichier
- * SQLite ouvert via `@libsql/client` en mode `file:` — même client, même
- * API, zéro divergence de code.
+ * Seed Turso : pousse le schéma + les 9 produits initiaux dans la base
+ * cloud. À lancer UNE FOIS après avoir créé la DB sur turso.tech et
+ * ajouté les variables d'env (TURSO_DATABASE_URL, TURSO_AUTH_TOKEN).
+ *
+ *   TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=eyJ... \\
+ *     npx jiti scripts/seed-turso.ts
+ *
+ * Idempotent : si la table products contient déjà des lignes, le seed
+ * des produits est sauté (mais le schéma `CREATE TABLE IF NOT EXISTS`
+ * est toujours appliqué).
+ *
+ * En .mjs pour éviter le tsx + la résolution des paths `@/` — on importe
+ * directement depuis `@libsql/client`, qui est la seule dépendance
+ * nécessaire ici.
  */
-export function useTurso(): boolean {
-  return process.env.NETLIFY === "true";
-}
+import { createClient } from "@libsql/client";
 
-function resolveClientConfig(): { url: string; authToken?: string } {
-  if (useTurso()) {
-    const url = process.env.TURSO_DATABASE_URL;
-    const authToken = process.env.TURSO_AUTH_TOKEN;
-    if (!url) {
-      throw new Error(
-        "TURSO_DATABASE_URL manquant : ajoute-le dans les variables d'env Netlify.",
-      );
-    }
-    if (!authToken) {
-      throw new Error(
-        "TURSO_AUTH_TOKEN manquant : ajoute-le dans les variables d'env Netlify.",
-      );
-    }
-    return { url, authToken };
-  }
-  // Local : SQLite fichier. S'assurer que le dossier existe.
-  fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
-  return { url: `file:${LOCAL_DB_PATH}` };
+const url = process.env.TURSO_DATABASE_URL;
+const authToken = process.env.TURSO_AUTH_TOKEN;
+
+if (!url || !authToken) {
+  console.error(
+    "Variables d'env manquantes. Lance la commande avec :\n" +
+      "  TURSO_DATABASE_URL=libsql://... TURSO_AUTH_TOKEN=eyJ... npx jiti scripts/seed-turso.ts",
+  );
+  process.exit(1);
 }
 
 const SEED_PRODUCTS = [
@@ -148,80 +137,88 @@ const SEED_PRODUCTS = [
     image: "/products/extrait-naturel-basilic.svg",
     featured: false,
   },
-] as const;
+];
 
-async function ensureSchema(client: Client): Promise<void> {
-  const statements = [
-    `CREATE TABLE IF NOT EXISTS orders (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      created_at TEXT NOT NULL,
-      customer_name TEXT NOT NULL,
-      phone TEXT NOT NULL,
-      address TEXT NOT NULL,
-      delivery_zone_slug TEXT NOT NULL,
-      delivery_zone_label TEXT NOT NULL,
-      delivery_fee INTEGER NOT NULL,
-      items_json TEXT NOT NULL,
-      subtotal INTEGER NOT NULL,
-      total INTEGER NOT NULL,
-      status TEXT NOT NULL DEFAULT 'recue',
-      idempotency_key TEXT,
-      status_history TEXT
-    )`,
-    `CREATE TABLE IF NOT EXISTS products (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      slug TEXT NOT NULL UNIQUE,
-      name TEXT NOT NULL,
-      category TEXT NOT NULL,
-      short_description TEXT NOT NULL,
-      description TEXT NOT NULL,
-      price INTEGER NOT NULL,
-      volume_ml INTEGER NOT NULL,
-      image TEXT NOT NULL,
-      featured INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL,
-      stock INTEGER NOT NULL DEFAULT 100,
-      whatsapp_catalog_url TEXT
-    )`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key
-      ON orders(idempotency_key) WHERE idempotency_key IS NOT NULL`,
-    `CREATE TABLE IF NOT EXISTS articles (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      slug TEXT NOT NULL UNIQUE,
-      title TEXT NOT NULL,
-      excerpt TEXT NOT NULL,
-      content TEXT NOT NULL,
-      cover_image TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'brouillon',
-      published_at TEXT,
-      created_at TEXT NOT NULL,
-      updated_at TEXT NOT NULL
-    )`,
-    `CREATE TABLE IF NOT EXISTS subscribers (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      email TEXT NOT NULL UNIQUE,
-      created_at TEXT NOT NULL
-    )`,
-    `CREATE TABLE IF NOT EXISTS reviews (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      product_slug TEXT NOT NULL,
-      author_name TEXT NOT NULL,
-      rating INTEGER NOT NULL,
-      comment TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'en_attente',
-      created_at TEXT NOT NULL
-    )`,
-  ];
-  for (const statement of statements) {
+const SCHEMA_STATEMENTS = [
+  `CREATE TABLE IF NOT EXISTS orders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_at TEXT NOT NULL,
+    customer_name TEXT NOT NULL,
+    phone TEXT NOT NULL,
+    address TEXT NOT NULL,
+    delivery_zone_slug TEXT NOT NULL,
+    delivery_zone_label TEXT NOT NULL,
+    delivery_fee INTEGER NOT NULL,
+    items_json TEXT NOT NULL,
+    subtotal INTEGER NOT NULL,
+    total INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'recue',
+    idempotency_key TEXT,
+    status_history TEXT
+  )`,
+  `CREATE TABLE IF NOT EXISTS products (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    short_description TEXT NOT NULL,
+    description TEXT NOT NULL,
+    price INTEGER NOT NULL,
+    volume_ml INTEGER NOT NULL,
+    image TEXT NOT NULL,
+    featured INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL,
+    stock INTEGER NOT NULL DEFAULT 100,
+    whatsapp_catalog_url TEXT
+  )`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS idx_orders_idempotency_key
+    ON orders(idempotency_key) WHERE idempotency_key IS NOT NULL`,
+  `CREATE TABLE IF NOT EXISTS articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    excerpt TEXT NOT NULL,
+    content TEXT NOT NULL,
+    cover_image TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'brouillon',
+    published_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS subscribers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE,
+    created_at TEXT NOT NULL
+  )`,
+  `CREATE TABLE IF NOT EXISTS reviews (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_slug TEXT NOT NULL,
+    author_name TEXT NOT NULL,
+    rating INTEGER NOT NULL,
+    comment TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'en_attente',
+    created_at TEXT NOT NULL
+  )`,
+];
+
+async function main() {
+  const client = createClient({ url, authToken });
+  console.log("→ Connexion à Turso…");
+
+  console.log("→ Application du schéma…");
+  for (const statement of SCHEMA_STATEMENTS) {
     await client.execute(statement);
   }
-}
 
-async function seedIfEmpty(client: Client): Promise<void> {
-  const result = await client.execute("SELECT COUNT(*) as count FROM products");
-  const count = Number(result.rows[0]?.count ?? 0);
-  if (count > 0) return;
+  const { rows } = await client.execute("SELECT COUNT(*) as count FROM products");
+  const existing = Number(rows[0]?.count ?? 0);
+  if (existing > 0) {
+    console.log(`→ ${existing} produits déjà présents, seed ignoré.`);
+    console.log("✓ Terminé.");
+    return;
+  }
 
+  console.log("→ Insertion des 9 produits seed…");
   const now = new Date().toISOString();
   for (const product of SEED_PRODUCTS) {
     await client.execute({
@@ -244,57 +241,10 @@ async function seedIfEmpty(client: Client): Promise<void> {
     });
   }
 
-  // Migration défensive : la catégorie "extraits-naturels" a été remplacée
-  // par une taxonomie plus détaillée (voir lib/categories.ts). Sans effet
-  // sur une base fraîche déjà seedée avec les bonnes catégories.
-  const legacyCategoryMap: Record<string, string> = {
-    "extrait-naturel-moringa": "poudres",
-    "extrait-naturel-gingembre": "infusions",
-    "extrait-naturel-neem": "cosmetiques-reparateurs",
-    "extrait-naturel-basilic": "infusions",
-  };
-  for (const [slug, category] of Object.entries(legacyCategoryMap)) {
-    await client.execute({
-      sql: "UPDATE products SET category = ? WHERE slug = ? AND category = 'extraits-naturels'",
-      args: [category, slug],
-    });
-  }
+  console.log(`✓ Seed terminé : ${SEED_PRODUCTS.length} produits insérés.`);
 }
 
-async function initClient(): Promise<Client> {
-  const config = resolveClientConfig();
-  const client = createClient(config);
-  await ensureSchema(client);
-  await seedIfEmpty(client);
-  return client;
-}
-
-declare global {
-  // eslint-disable-next-line no-var
-  var __vivrebioDb: Client | undefined;
-  var __vivrebioDbPromise: Promise<Client> | undefined;
-}
-
-/**
- * Instance unique du client libSQL, mise en cache sur `globalThis` pour
- * survivre au rechargement à chaud (dev) et éviter une connexion par
- * requête (prod).
- *
- * L'init est async (Turso fait un round-trip HTTP). On partage la même
- * Promise entre tous les appelants pour ne pas dupliquer l'init en
- * parallèle, et on bloque les requêtes tant qu'elle n'est pas résolue.
- *
- * Côté code métier (cf. lib/products.ts, lib/orders.ts…) :
- *   const db = await getDb();
- *   const rows = await db.execute({ sql: "...", args: [...] });
- */
-export async function getDb(): Promise<Client> {
-  if (globalThis.__vivrebioDb) return globalThis.__vivrebioDb;
-  if (!globalThis.__vivrebioDbPromise) {
-    globalThis.__vivrebioDbPromise = initClient().then((client) => {
-      globalThis.__vivrebioDb = client;
-      return client;
-    });
-  }
-  return globalThis.__vivrebioDbPromise;
-}
+main().catch((error) => {
+  console.error("✗ Échec du seed :", error);
+  process.exit(1);
+});

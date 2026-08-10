@@ -35,7 +35,7 @@ export async function GET(request: Request): Promise<Response> {
   const status =
     statutParam && statutParam !== "toutes" ? (statutParam as OrderStatus) : undefined;
 
-  const orders = listOrdersForExport({ status, from, to });
+  const orders = await listOrdersForExport({ status, from, to });
 
   const header = toCsvRow([
     "N° commande",

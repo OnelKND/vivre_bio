@@ -25,7 +25,7 @@ export async function changeOrderStatus(formData: FormData): Promise<void> {
     return;
   }
 
-  updateOrderStatus(id, status);
+  await updateOrderStatus(id, status);
   revalidatePath("/admin");
   revalidatePath(`/admin/commandes/${id}`);
 }
