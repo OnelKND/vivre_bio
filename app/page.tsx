@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getAllCategories } from "@/lib/categories";
 import { getAllDeliveryZones } from "@/lib/delivery-zones";
-import { getAllProducts, getFeaturedProducts } from "@/lib/products";
+import { getAllProducts, getFeaturedProducts, getProductBySlug } from "@/lib/products";
+import { getFeaturedReviews, getSiteReviewStats } from "@/lib/reviews";
 import AmbientGlow from "@/components/ui/AmbientGlow";
 import CtaBand from "@/components/ui/CtaBand";
 import ProductGrid from "@/components/product/ProductGrid";
 import ProcessSteps from "@/components/ui/ProcessSteps";
 import ReassuranceBar from "@/components/ui/ReassuranceBar";
+import ReviewStars from "@/components/product/ReviewStars";
 import Reveal from "@/components/ui/Reveal";
 import SectionHeading from "@/components/ui/SectionHeading";
 import VideoShowcase from "@/components/ui/VideoShowcase";
@@ -16,6 +18,11 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
   const categories = getAllCategories();
   const featuredProducts = getFeaturedProducts();
+  const reviewStats = getSiteReviewStats();
+  const featuredReviews = getFeaturedReviews(3).map((review) => ({
+    ...review,
+    productName: getProductBySlug(review.productSlug)?.name,
+  }));
   const STATS = [
     { value: `${getAllProducts().length}+`, label: "Produits naturels" },
     { value: `${getAllDeliveryZones().length}`, label: "Zones livrées au Bénin" },
@@ -131,6 +138,46 @@ export default function HomePage() {
               </div>
             </Reveal>
           </div>
+        </section>
+      )}
+
+      {reviewStats.count > 0 && (
+        <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
+          <Reveal>
+            <SectionHeading
+              eyebrow="Ils nous font confiance"
+              title="Ce que nos clients en disent"
+            />
+          </Reveal>
+          <Reveal delay={100}>
+            <div className="flex items-center justify-center gap-3 mt-6">
+              <ReviewStars rating={reviewStats.average} size="text-xl" />
+              <span className="font-semibold">
+                {reviewStats.average.toFixed(1)} / 5
+              </span>
+              <span className="text-sm text-base-content/60">
+                ({reviewStats.count} avis vérifiés)
+              </span>
+            </div>
+          </Reveal>
+          {featuredReviews.length > 0 && (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-10">
+              {featuredReviews.map((review, index) => (
+                <Reveal key={review.id} delay={150 + index * 100}>
+                  <div className="h-full rounded-box border border-base-300 bg-base-100 p-6 flex flex-col gap-3">
+                    <ReviewStars rating={review.rating} />
+                    <p className="text-base-content/80 text-sm">
+                      « {review.comment} »
+                    </p>
+                    <p className="text-xs text-base-content/50 mt-auto">
+                      {review.authorName}
+                      {review.productName && ` — ${review.productName}`}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+          )}
         </section>
       )}
 

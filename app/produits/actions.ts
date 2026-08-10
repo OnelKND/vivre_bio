@@ -78,6 +78,6 @@ export async function submitReviewAction(
 
   return {
     status: "success",
-    message: "Merci, votre avis sera visible après validation.",
+    message: "Merci pour votre avis.",
   };
 }

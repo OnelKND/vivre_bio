@@ -10,18 +10,32 @@ export default function ProductCard({ product }: { product: Product }) {
   const category = getCategoryBySlug(product.category);
 
   return (
-    <article className="group flex flex-col gap-3 transition-transform duration-300 hover:-translate-y-1">
+    <article className="label-tick group flex flex-col gap-3 border border-base-300 bg-base-100 p-3 transition-colors duration-300 hover:border-label">
       <div className="relative">
         <Link href={`/produits/${product.slug}`} className="block">
           <ProductImage src={product.image} alt={product.name} />
         </Link>
-        {product.featured && (
+        {product.stock <= 0 ? (
           <div className="absolute top-2 left-2">
-            <Badge variant="accent">Vedette</Badge>
+            <Badge variant="accent">Épuisé</Badge>
           </div>
+        ) : product.stock <= 5 ? (
+          <div className="absolute top-2 left-2">
+            <Badge variant="accent">Plus que {product.stock}</Badge>
+          </div>
+        ) : (
+          product.featured && (
+            <div className="absolute top-2 left-2">
+              <Badge variant="accent">Vedette</Badge>
+            </div>
+          )
         )}
         <div className="absolute bottom-2 right-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:focus-within:opacity-100 transition-opacity">
-          <AddToCartButton slug={product.slug} className="btn-sm btn-circle shadow-md" />
+          <AddToCartButton
+            slug={product.slug}
+            className="btn-sm btn-circle shadow-md"
+            disabled={product.stock <= 0}
+          />
         </div>
       </div>
       <div className="flex flex-col gap-1">

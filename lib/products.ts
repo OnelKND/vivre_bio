@@ -15,6 +15,9 @@ export interface Product {
   volumeMl: number;
   image: string;
   featured: boolean;
+  stock: number;
+  /** Lien vers la fiche produit dans le catalogue WhatsApp Business, s'il existe. */
+  whatsappCatalogUrl: string | null;
 }
 
 /** Champs éditables depuis l'admin — le slug est dérivé du nom, jamais saisi. */
@@ -27,6 +30,8 @@ export interface ProductInput {
   volumeMl: number;
   image: string;
   featured: boolean;
+  stock: number;
+  whatsappCatalogUrl: string | null;
 }
 
 interface ProductRow {
@@ -41,6 +46,8 @@ interface ProductRow {
   image: string;
   featured: number;
   created_at: string;
+  stock: number;
+  whatsapp_catalog_url: string | null;
 }
 
 function rowToProduct(row: ProductRow): Product {
@@ -55,6 +62,8 @@ function rowToProduct(row: ProductRow): Product {
     volumeMl: row.volume_ml,
     image: row.image,
     featured: row.featured === 1,
+    stock: row.stock,
+    whatsappCatalogUrl: row.whatsapp_catalog_url,
   };
 }
 
@@ -128,8 +137,8 @@ export function createProduct(slug: string, input: ProductInput): Product {
   const statement = db.prepare(`
     INSERT INTO products (
       slug, name, category, short_description, description,
-      price, volume_ml, image, featured, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      price, volume_ml, image, featured, created_at, stock, whatsapp_catalog_url
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = statement.run(
     slug,
@@ -141,7 +150,9 @@ export function createProduct(slug: string, input: ProductInput): Product {
     input.volumeMl,
     input.image,
     input.featured ? 1 : 0,
-    now
+    now,
+    input.stock,
+    input.whatsappCatalogUrl
   );
 
   const product = getProductById(Number(result.lastInsertRowid));
@@ -155,7 +166,7 @@ export function updateProduct(id: number, input: ProductInput): Product | undefi
   db.prepare(`
     UPDATE products SET
       name = ?, category = ?, short_description = ?, description = ?,
-      price = ?, volume_ml = ?, image = ?, featured = ?
+      price = ?, volume_ml = ?, image = ?, featured = ?, stock = ?, whatsapp_catalog_url = ?
     WHERE id = ?
   `).run(
     input.name,
@@ -166,12 +177,36 @@ export function updateProduct(id: number, input: ProductInput): Product | undefi
     input.volumeMl,
     input.image,
     input.featured ? 1 : 0,
+    input.stock,
+    input.whatsappCatalogUrl,
     id
   );
   return getProductById(id);
 }
 
+/** Mise à jour ciblée du lien catalogue WhatsApp seul (édition en bloc). */
+export function updateProductWhatsappLink(id: number, whatsappCatalogUrl: string | null): void {
+  const db = getDb();
+  db.prepare("UPDATE products SET whatsapp_catalog_url = ? WHERE id = ?").run(
+    whatsappCatalogUrl,
+    id
+  );
+}
+
 export function deleteProduct(id: number): void {
   const db = getDb();
   db.prepare("DELETE FROM products WHERE id = ?").run(id);
+}
+
+/**
+ * Décrémente le stock après une commande. `MAX(0, ...)` protège contre un
+ * stock négatif si deux commandes concurrentes passaient la validation en
+ * même temps.
+ */
+export function decrementStock(slug: string, quantity: number): void {
+  const db = getDb();
+  db.prepare("UPDATE products SET stock = MAX(0, stock - ?) WHERE slug = ?").run(
+    quantity,
+    slug
+  );
 }

@@ -44,15 +44,14 @@ export default function AboutPage() {
       </Reveal>
 
       <Reveal delay={100}>
-        <div className="prose max-w-none text-base-content/80">
+        <div className="flex flex-col gap-4 max-w-2xl mx-auto text-center text-base-content/80">
           <p>
             Depuis le Bénin, VIVRE BIO transforme des plantes aromatiques
             locales en huiles essentielles, huiles végétales et autres
-            produits naturels bio vendus directement en ligne. Notre
-            démarche part d&apos;une exigence de
-            qualité et de transparence : chaque produit est pensé pour
-            accompagner un mode de vie plus naturel, sans intermédiaire
-            superflu entre la plante et votre flacon.
+            produits naturels bio vendus directement en ligne. Notre démarche
+            part d&apos;une exigence de qualité et de transparence : chaque
+            produit est pensé pour accompagner un mode de vie plus naturel,
+            sans intermédiaire superflu entre la plante et votre flacon.
           </p>
           <p>
             Notre slogan, « Le meilleur de la nature pour vous », résume notre

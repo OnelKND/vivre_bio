@@ -1,29 +1,55 @@
 interface AmbientGlowProps {
-  /** "dark" pour un fond plein (vert), "light" pour un fond blanc/crème. */
+  /** "dark" pour un fond plein (vert), "light" pour un fond crème/kraft. */
   variant?: "dark" | "light";
 }
 
 /**
- * Fond décoratif : quelques halos de couleur flous qui dérivent lentement.
- * Respecte prefers-reduced-motion (voir globals.css, classe .ambient-glow).
+ * Fond décoratif façon planche d'herbier : une branche au trait fin, en
+ * filigrane, plutôt que des halos flous génériques. Dérive très lentement
+ * (respecte prefers-reduced-motion, voir globals.css classe .ambient-glow).
  */
 export default function AmbientGlow({ variant = "dark" }: AmbientGlowProps) {
-  const blobClasses =
-    variant === "dark"
-      ? ["bg-white/10", "bg-accent/25", "bg-white/10"]
-      : ["bg-primary/15", "bg-accent/15", "bg-secondary/20"];
+  const stroke = variant === "dark" ? "rgba(255,255,255,0.14)" : "var(--color-label)";
+  const strokeOpacity = variant === "dark" ? 1 : 0.35;
 
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div
-        className={`ambient-glow absolute -top-24 -left-16 h-80 w-80 rounded-full ${blobClasses[0]} blur-3xl [animation-duration:16s]`}
-      />
-      <div
-        className={`ambient-glow absolute top-1/3 -right-20 h-96 w-96 rounded-full ${blobClasses[1]} blur-3xl [animation-duration:20s] [animation-delay:-4s]`}
-      />
-      <div
-        className={`ambient-glow absolute -bottom-28 left-1/4 h-72 w-72 rounded-full ${blobClasses[2]} blur-3xl [animation-duration:14s] [animation-delay:-8s]`}
-      />
+      <svg
+        className="ambient-glow absolute -top-10 -right-16 h-72 w-72 sm:h-96 sm:w-96 [animation-duration:40s]"
+        viewBox="0 0 200 200"
+        fill="none"
+      >
+        <path
+          d="M100 10 C100 60 100 140 100 190"
+          stroke={stroke}
+          strokeOpacity={strokeOpacity}
+          strokeWidth="1"
+        />
+        {[40, 75, 110, 145].map((y, i) => (
+          <path
+            key={y}
+            d={`M100 ${y} C ${i % 2 === 0 ? "70 " + (y - 10) + ", 55 " + (y + 5) + ", 45" : "130 " + (y - 10) + ", 145 " + (y + 5) + ", 155"} ${y + 18}`}
+            stroke={stroke}
+            strokeOpacity={strokeOpacity}
+            strokeWidth="1"
+          />
+        ))}
+      </svg>
+      <svg
+        className="ambient-glow absolute -bottom-16 -left-10 h-56 w-56 sm:h-72 sm:w-72 [animation-duration:48s] [animation-delay:-6s]"
+        viewBox="0 0 200 200"
+        fill="none"
+      >
+        <circle
+          cx="100"
+          cy="100"
+          r="70"
+          stroke={stroke}
+          strokeOpacity={strokeOpacity}
+          strokeWidth="1"
+          strokeDasharray="2 6"
+        />
+      </svg>
     </div>
   );
 }

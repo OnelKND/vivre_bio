@@ -13,8 +13,10 @@ import {
   createProduct,
   deleteProduct,
   generateProductSlug,
+  getAllProducts,
   getProductById,
   updateProduct,
+  updateProductWhatsappLink,
 } from "@/lib/products";
 
 async function hasValidAdminSession(): Promise<boolean> {
@@ -36,6 +38,16 @@ const productSchema = z.object({
   description: z.string().trim().min(10, "Description trop courte.").max(3000),
   price: z.coerce.number().int().positive().max(10_000_000, "Prix invalide."),
   volumeMl: z.coerce.number().int().positive().max(100_000, "Volume invalide."),
+  stock: z.coerce.number().int().min(0).max(100_000, "Stock invalide."),
+  whatsappCatalogUrl: z
+    .string()
+    .trim()
+    .max(500)
+    .refine((value) => value === "" || /^https:\/\//.test(value), {
+      message: "Le lien catalogue WhatsApp doit commencer par https://",
+    })
+    .optional()
+    .transform((value) => (value ? value : null)),
 });
 
 const ALLOWED_IMAGE_TYPES: Record<string, string> = {
@@ -114,6 +126,8 @@ export async function createProductAction(
     description: formData.get("description"),
     price: formData.get("price"),
     volumeMl: formData.get("volumeMl"),
+    stock: formData.get("stock"),
+    whatsappCatalogUrl: formData.get("whatsappCatalogUrl"),
   });
 
   if (!parsed.success) {
@@ -168,6 +182,8 @@ export async function updateProductAction(
     description: formData.get("description"),
     price: formData.get("price"),
     volumeMl: formData.get("volumeMl"),
+    stock: formData.get("stock"),
+    whatsappCatalogUrl: formData.get("whatsappCatalogUrl"),
   });
 
   if (!parsed.success) {
@@ -205,6 +221,60 @@ export async function updateProductAction(
   redirect(
     `/admin/produits?updated=${encodeURIComponent(parsed.data.name)}${q ? `&q=${encodeURIComponent(q)}` : ""}`
   );
+}
+
+export interface BulkWhatsappLinksState {
+  status: "idle" | "success" | "error";
+  message?: string;
+}
+
+/**
+ * Met à jour en une seule soumission le lien catalogue WhatsApp de tous les
+ * produits édités depuis la page /admin/produits/liens-whatsapp — évite de
+ * rouvrir chaque fiche produit une par une.
+ */
+export async function bulkUpdateWhatsappLinksAction(
+  _prevState: BulkWhatsappLinksState,
+  formData: FormData
+): Promise<BulkWhatsappLinksState> {
+  if (!(await hasValidAdminSession())) {
+    return { status: "error", message: "Session expirée, reconnectez-vous." };
+  }
+
+  const products = getAllProducts();
+  let updated = 0;
+  const skipped: string[] = [];
+
+  for (const product of products) {
+    const raw = formData.get(`link-${product.id}`);
+    if (raw === null) continue;
+    const value = String(raw).trim();
+
+    if (value !== "" && !/^https:\/\//.test(value)) {
+      skipped.push(product.name);
+      continue;
+    }
+
+    const nextValue = value === "" ? null : value;
+    if (nextValue === product.whatsappCatalogUrl) continue;
+
+    updateProductWhatsappLink(product.id, nextValue);
+    updated += 1;
+  }
+
+  revalidatePath("/admin/produits/liens-whatsapp");
+
+  if (skipped.length > 0) {
+    return {
+      status: "error",
+      message: `${updated} lien(s) enregistré(s). Ignorés (doivent commencer par https://) : ${skipped.join(", ")}.`,
+    };
+  }
+
+  return {
+    status: "success",
+    message: updated > 0 ? `${updated} lien(s) enregistré(s).` : "Aucun changement.",
+  };
 }
 
 export async function deleteProductAction(formData: FormData): Promise<void> {

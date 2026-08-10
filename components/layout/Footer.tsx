@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getAllCategories } from "@/lib/categories";
+import NewsletterForm from "./NewsletterForm";
 
 const SOCIAL_LINKS = [
   { label: "Facebook", icon: "fa-brands fa-facebook", href: "#" },
@@ -14,7 +15,21 @@ export default function Footer() {
 
   return (
     <footer className="bg-neutral text-neutral-content">
-      <div className="h-1 bg-linear-to-r from-primary to-accent" aria-hidden="true" />
+      <div
+        className="h-0 border-t-2 border-dashed border-label/60"
+        aria-hidden="true"
+      />
+      <div className="border-b border-white/10">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold text-white">Nos offres et nouveautés</h2>
+            <p className="text-sm text-neutral-content/70">
+              Inscrivez-vous pour être informé·e des nouveaux produits et promotions.
+            </p>
+          </div>
+          <NewsletterForm />
+        </div>
+      </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="md:col-span-1">
           <span className="font-sans font-bold text-2xl text-white">

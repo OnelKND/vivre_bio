@@ -1,9 +1,14 @@
 import "server-only";
 import { getDb } from "./db";
-import { type OrderStatus, ORDER_STATUS_SEQUENCE, ORDER_STATUS_LABELS } from "./order-status";
+import {
+  type OrderStatus,
+  ORDER_STATUS_SEQUENCE,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_BADGE_CLASS,
+} from "./order-status";
 
 export type { OrderStatus };
-export { ORDER_STATUS_SEQUENCE, ORDER_STATUS_LABELS };
+export { ORDER_STATUS_SEQUENCE, ORDER_STATUS_LABELS, ORDER_STATUS_BADGE_CLASS };
 
 export interface OrderItemRecord {
   slug: string;

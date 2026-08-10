@@ -175,6 +175,12 @@ function createDatabase(): DatabaseSync {
     );
   `);
 
+  // Défaut à 100 (pas 0) : les produits déjà en base ne doivent pas
+  // apparaître soudainement "épuisés" après cette migration — l'admin
+  // ajuste ensuite les vraies quantités produit par produit.
+  ensureColumn(database, "products", "stock", "INTEGER NOT NULL DEFAULT 100");
+  ensureColumn(database, "products", "whatsapp_catalog_url", "TEXT");
+
   const { count } = database
     .prepare("SELECT COUNT(*) as count FROM products")
     .get() as { count: number };
@@ -231,6 +237,14 @@ function createDatabase(): DatabaseSync {
       published_at TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
+    );
+  `);
+
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS subscribers (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
     );
   `);
 

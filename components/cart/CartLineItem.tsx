@@ -36,7 +36,7 @@ export default function CartLineItem({
         value={quantity}
         onChange={(next) => setQuantity(product.slug, next)}
         min={1}
-        max={20}
+        max={Math.min(20, product.stock)}
       />
 
       <p className="w-24 text-right font-semibold">

@@ -1,0 +1,10 @@
+# Déploiement démo / présentation sur Netlify (sous-domaine *.netlify.app).
+# Next.js 16 est détecté automatiquement — pas besoin de plugin manuel.
+
+[build]
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "24"
+  # Active distDir ".next" (voir next.config.ts) au lieu de ".next-build".
+  NETLIFY = "true"

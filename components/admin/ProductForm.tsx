@@ -147,6 +147,24 @@ export default function ProductForm({
       </div>
 
       <div className="flex flex-col gap-1">
+        <label htmlFor="stock" className="font-medium text-sm">
+          Stock disponible
+        </label>
+        <input
+          id="stock"
+          name="stock"
+          type="number"
+          min={0}
+          required
+          defaultValue={product?.stock}
+          className="input border border-base-300 w-full max-w-40"
+        />
+        <p className="text-xs text-base-content/50">
+          À 0, le produit affiche « Épuisé » et ne peut plus être ajouté au panier.
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
         <label htmlFor="image" className="font-medium text-sm">
           Image{" "}
           {product ? "(laisser vide pour garder l'actuelle)" : "(facultative)"}
@@ -200,6 +218,27 @@ export default function ProductForm({
           JPG, PNG ou WEBP, 5 Mo maximum.{" "}
           {!product &&
             "Sans photo, un visuel provisoire avec l'initiale du produit sera utilisé."}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label htmlFor="whatsappCatalogUrl" className="font-medium text-sm">
+          Lien du produit dans le catalogue WhatsApp Business (facultatif)
+        </label>
+        <input
+          id="whatsappCatalogUrl"
+          name="whatsappCatalogUrl"
+          type="url"
+          placeholder="https://wa.me/c/..."
+          defaultValue={product?.whatsappCatalogUrl ?? ""}
+          className="input border border-base-300 w-full"
+        />
+        <p className="text-xs text-base-content/50">
+          Depuis WhatsApp Business, ouvre l&apos;article dans le catalogue,
+          appuie sur « Partager » puis « Copier le lien », et colle-le ici.
+          S&apos;il est renseigné, le bouton « Commander sur WhatsApp » de la
+          fiche produit y renverra directement ; sinon il ouvre une
+          conversation avec un message pré-rempli.
         </p>
       </div>
 

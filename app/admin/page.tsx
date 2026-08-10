@@ -1,6 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { listOrders, ORDER_STATUS_LABELS, type OrderStatus } from "@/lib/orders";
+import {
+  listOrders,
+  ORDER_STATUS_LABELS,
+  ORDER_STATUS_BADGE_CLASS,
+  type OrderStatus,
+} from "@/lib/orders";
 import { getAllReviews } from "@/lib/reviews";
 import { formatFCFA } from "@/lib/format";
 import { logoutAdmin } from "./login/actions";
@@ -68,6 +73,10 @@ export default async function AdminDashboardPage({
             {pendingReviewsCount > 0 && (
               <span className="badge badge-accent badge-xs">{pendingReviewsCount}</span>
             )}
+          </Link>
+          <Link href="/admin/abonnes" className="btn btn-primary btn-sm">
+            <i className="fa-solid fa-envelope" aria-hidden="true" />
+            Abonnés
           </Link>
           <form action={logoutAdmin}>
             <button type="submit" className="btn btn-ghost btn-sm">
@@ -155,11 +164,24 @@ export default async function AdminDashboardPage({
                   <tr key={order.id}>
                     <td>{order.id}</td>
                     <td>{new Date(order.createdAt).toLocaleString("fr-FR")}</td>
-                    <td>{order.customerName}</td>
+                    <td>
+                      <div className="flex flex-col">
+                        <span>{order.customerName}</span>
+                        <a
+                          href={`tel:${order.phone}`}
+                          className="text-xs text-base-content/60 hover:text-primary"
+                        >
+                          <i className="fa-solid fa-phone text-[0.6rem]" aria-hidden="true" />{" "}
+                          {order.phone}
+                        </a>
+                      </div>
+                    </td>
                     <td>{order.deliveryZoneLabel}</td>
                     <td>{formatFCFA(order.total)}</td>
                     <td>
-                      <span className="badge badge-outline px-3 py-3 whitespace-nowrap">
+                      <span
+                        className={`badge ${ORDER_STATUS_BADGE_CLASS[order.status]} px-3 py-3 whitespace-nowrap`}
+                      >
                         {ORDER_STATUS_LABELS[order.status]}
                       </span>
                     </td>

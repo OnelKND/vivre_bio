@@ -8,6 +8,7 @@ interface AddToCartButtonProps {
   quantity?: number;
   className?: string;
   fullLabel?: boolean;
+  disabled?: boolean;
 }
 
 export default function AddToCartButton({
@@ -15,6 +16,7 @@ export default function AddToCartButton({
   quantity = 1,
   className = "",
   fullLabel = false,
+  disabled = false,
 }: AddToCartButtonProps) {
   const { addToCart } = useCart();
   const [justAdded, setJustAdded] = useState(false);
@@ -29,14 +31,17 @@ export default function AddToCartButton({
     <button
       type="button"
       onClick={handleClick}
-      aria-label="Ajouter au panier"
+      disabled={disabled}
+      aria-label={disabled ? "Produit épuisé" : "Ajouter au panier"}
       className={`btn btn-primary ${className}`}
     >
       <i
         className={`fa-solid ${justAdded ? "fa-check" : "fa-cart-plus"}`}
         aria-hidden="true"
       />
-      {fullLabel && <span>{justAdded ? "Ajouté" : "Ajouter au panier"}</span>}
+      {fullLabel && (
+        <span>{disabled ? "Épuisé" : justAdded ? "Ajouté" : "Ajouter au panier"}</span>
+      )}
     </button>
   );
 }

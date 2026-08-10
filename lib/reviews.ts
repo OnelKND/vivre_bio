@@ -67,6 +67,26 @@ export function getReviewStats(productSlug: string): ReviewStats {
   return { average: row.average ?? 0, count: row.count };
 }
 
+/** Note moyenne et nombre total d'avis approuvés, tous produits confondus (preuve sociale sur la home). */
+export function getSiteReviewStats(): ReviewStats {
+  const db = getDb();
+  const row = db
+    .prepare("SELECT AVG(rating) as average, COUNT(*) as count FROM reviews WHERE status = 'approuve'")
+    .get() as { average: number | null; count: number };
+  return { average: row.average ?? 0, count: row.count };
+}
+
+/** Avis les mieux notés, tous produits confondus, pour une mise en avant sur la home. */
+export function getFeaturedReviews(limit: number): (Review & { productSlug: string })[] {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      "SELECT * FROM reviews WHERE status = 'approuve' AND rating >= 4 ORDER BY rating DESC, created_at DESC LIMIT ?"
+    )
+    .all(limit) as unknown as ReviewRow[];
+  return rows.map(rowToReview);
+}
+
 /** Admin : tous les avis, tous produits, en attente en premier. */
 export function getAllReviews(): Review[] {
   const db = getDb();

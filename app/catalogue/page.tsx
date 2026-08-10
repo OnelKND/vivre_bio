@@ -15,13 +15,22 @@ export const metadata: Metadata = {
 export default async function CataloguePage({
   searchParams,
 }: {
-  searchParams: Promise<{ categorie?: string }>;
+  searchParams: Promise<{ categorie?: string; q?: string }>;
 }) {
-  const { categorie } = await searchParams;
+  const { categorie, q } = await searchParams;
   const category = categorie ? getCategoryBySlug(categorie) : undefined;
-  const products = category
+  const baseProducts = category
     ? getProductsByCategory(category.slug)
     : getAllProducts();
+
+  const query = q?.trim().toLowerCase();
+  const products = query
+    ? baseProducts.filter(
+        (product) =>
+          product.name.toLowerCase().includes(query) ||
+          product.shortDescription.toLowerCase().includes(query)
+      )
+    : baseProducts;
 
   return (
     <>
@@ -37,14 +46,37 @@ export default async function CataloguePage({
                 : "L'ensemble de notre gamme de produits naturels bio."
             }
           />
-          <div className="mt-8">
+          <form
+            action="/catalogue"
+            method="get"
+            className="mt-8 flex gap-2 max-w-sm mx-auto"
+          >
+            {category && <input type="hidden" name="categorie" value={category.slug} />}
+            <input
+              type="search"
+              name="q"
+              defaultValue={q}
+              placeholder="Rechercher un produit..."
+              className="input border border-base-300 w-full"
+            />
+            <button type="submit" className="btn btn-outline btn-square" aria-label="Rechercher">
+              <i className="fa-solid fa-magnifying-glass" aria-hidden="true" />
+            </button>
+          </form>
+          <div className="mt-4">
             <CategoryFilter activeCategory={category?.slug} />
           </div>
         </div>
       </div>
 
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
-        <ProductGrid products={products} />
+        {query && products.length === 0 ? (
+          <p className="text-center text-base-content/60">
+            Aucun produit ne correspond à « {q} ».
+          </p>
+        ) : (
+          <ProductGrid products={products} />
+        )}
       </div>
 
       <CtaBand

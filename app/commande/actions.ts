@@ -6,6 +6,7 @@ import { getDeliveryZoneBySlug } from "@/lib/delivery-zones";
 import { insertOrder, getOrderById } from "@/lib/orders";
 import { computeOrderItems, computeTotals } from "@/lib/order-pricing";
 import { sendOrderNotificationEmail } from "@/lib/mail";
+import { decrementStock, getProductBySlug } from "@/lib/products";
 
 const cartItemSchema = z.object({
   slug: z.string().max(200),
@@ -78,6 +79,21 @@ export async function createOrder(
     };
   }
 
+  // Le panier (localStorage) ne connaît pas le stock en temps réel : on
+  // revalide toujours côté serveur, jamais confiance aux quantités du
+  // client — même logique que les prix, déjà relus depuis lib/products.ts.
+  for (const item of items) {
+    const product = getProductBySlug(item.slug);
+    if (!product || product.stock < item.quantity) {
+      return {
+        status: "error",
+        message: product
+          ? `Stock insuffisant pour ${product.name} (il en reste ${product.stock}).`
+          : "Un des produits de votre panier n'est plus disponible.",
+      };
+    }
+  }
+
   const { subtotal, total } = computeTotals(items, zone.fee);
 
   const { id: orderId, isNew } = insertOrder({
@@ -94,6 +110,10 @@ export async function createOrder(
   });
 
   if (isNew) {
+    for (const item of items) {
+      decrementStock(item.slug, item.quantity);
+    }
+
     const order = getOrderById(orderId);
     if (order) {
       await sendOrderNotificationEmail(order);

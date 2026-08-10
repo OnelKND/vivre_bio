@@ -55,9 +55,11 @@ const nextConfig: NextConfig = {
   // `.next`, donc on ne l'applique pas sur leur environnement de build.
   ...(process.env.NETLIFY ? {} : { distDir: ".next-build" }),
   images: {
-    // Les photos produits sont pour l'instant des SVG placeholder générés
-    // localement (aucun contenu utilisateur) ; à retirer si elles sont
-    // remplacées par des JPG/PNG fournis par le client.
+    // Certains produits ont encore l'image placeholder SVG générée
+    // automatiquement (initiale du nom, aucun contenu utilisateur) en
+    // attendant une vraie photo uploadée depuis l'admin — retirer ce
+    // réglage une fois que tous les produits ont une vraie photo (JPG/PNG/
+    // WEBP), sinon les fiches encore en placeholder cassent.
     dangerouslyAllowSVG: true,
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },

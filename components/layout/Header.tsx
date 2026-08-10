@@ -124,10 +124,10 @@ export default function Header() {
           </nav>
         </div>
 
-        {/* Bordure basse en dégradé, sur toute la largeur. */}
+        {/* Bordure basse fine en tirets, façon liseré d'étiquette. */}
         <div
           aria-hidden="true"
-          className="absolute inset-x-0 bottom-0 h-px bg-linear-to-r from-primary/40 via-accent/40 to-secondary/40"
+          className="absolute inset-x-0 bottom-0 border-t border-dashed border-label/40"
         />
       </motion.div>
     </header>

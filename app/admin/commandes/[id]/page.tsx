@@ -5,8 +5,10 @@ import {
   getOrderById,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_SEQUENCE,
+  ORDER_STATUS_BADGE_CLASS,
 } from "@/lib/orders";
 import { formatFCFA } from "@/lib/format";
+import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { changeOrderStatus } from "../../actions";
 
 export const metadata: Metadata = {
@@ -23,19 +25,42 @@ export default async function AdminOrderDetailPage({
   const order = getOrderById(Number(id));
   if (!order) notFound();
 
+  const whatsappHref = buildWhatsAppLink(
+    `Bonjour ${order.customerName}, au sujet de votre commande #${order.id} chez VIVRE BIO...`
+  );
+
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-12">
       <Link href="/admin" className="text-sm link link-primary mb-6 inline-block">
         ← Retour aux commandes
       </Link>
-      <h1 className="font-bold text-2xl mb-6">Commande #{order.id}</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="font-bold text-2xl">Commande #{order.id}</h1>
+        <span className={`badge ${ORDER_STATUS_BADGE_CLASS[order.status]} px-3 py-3`}>
+          {ORDER_STATUS_LABELS[order.status]}
+        </span>
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-6 mb-8">
         <div>
           <h2 className="font-semibold mb-2">Client</h2>
           <p>{order.customerName}</p>
-          <p>{order.phone}</p>
           <p>{order.address}</p>
+          <div className="flex items-center gap-3 mt-2">
+            <a href={`tel:${order.phone}`} className="btn btn-outline btn-sm gap-2">
+              <i className="fa-solid fa-phone" aria-hidden="true" />
+              {order.phone}
+            </a>
+            <a
+              href={whatsappHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline btn-sm gap-2"
+            >
+              <i className="fa-brands fa-whatsapp" aria-hidden="true" />
+              WhatsApp
+            </a>
+          </div>
         </div>
         <div>
           <h2 className="font-semibold mb-2">Livraison</h2>
@@ -106,8 +131,10 @@ export default async function AdminOrderDetailPage({
           {order.statusHistory.map((entry, index) => (
             <li key={`${entry.status}-${entry.changedAt}`} className="flex items-center gap-3 text-sm">
               <span
-                className={`w-2 h-2 rounded-full ${
-                  index === order.statusHistory.length - 1 ? "bg-primary" : "bg-base-300"
+                className={`badge badge-xs ${
+                  index === order.statusHistory.length - 1
+                    ? ORDER_STATUS_BADGE_CLASS[entry.status]
+                    : "badge-outline"
                 }`}
                 aria-hidden="true"
               />

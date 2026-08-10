@@ -39,9 +39,9 @@
   --color-error: #E31E24;
   --color-error-content: #FFFFFF;
 
-  --radius-selector: 0.5rem;
+  --radius-selector: 0.375rem;
   --radius-field: 0.25rem;
-  --radius-box: 0.75rem;
+  --radius-box: 0.375rem;
 }
 
 @plugin "daisyui/theme" {
@@ -79,18 +79,56 @@
   --color-error: #E31E24;
   --color-error-content: #FFFFFF;
 
-  --radius-selector: 0.5rem;
+  --radius-selector: 0.375rem;
   --radius-field: 0.25rem;
-  --radius-box: 0.75rem;
+  --radius-box: 0.375rem;
 }
 
 @theme {
   --font-sans: var(--font-poppins), sans-serif;
   --font-accent: var(--font-great-vibes), cursive;
+  --color-label: #B08D3E;
+  --color-label-content: #FAF6EC;
 }
 
 body {
   font-family: var(--font-sans);
+}
+
+/*
+ * Cachet façon étiquette d'herbier : contour fin en tirets, coins francs.
+ * Remplace les halos flous génériques comme motif de signature du site —
+ * évoque le tampon manuscrit sur un flacon d'huile essentielle artisanale.
+ */
+.stamp-ring {
+  border: 1px dashed color-mix(in oklab, var(--color-label) 70%, transparent);
+}
+
+.label-tick {
+  position: relative;
+}
+
+.label-tick::before,
+.label-tick::after {
+  content: "";
+  position: absolute;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-color: var(--color-label);
+}
+
+.label-tick::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.label-tick::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid;
+  border-right: 1px solid;
 }
 
 @keyframes cart-badge-pop {
@@ -192,4 +230,24 @@ body {
 .article-content a {
   color: var(--color-primary);
   text-decoration: underline;
+}
+
+/*
+ * Les boutons `btn-xs`/`btn-sm` de daisyUI sont trop petits pour le texte
+ * qu'ils contiennent un peu partout sur le site (admin en particulier) —
+ * on remonte leurs dimensions d'un cran sur l'échelle de tailles déjà
+ * définie par daisyUI (xs prend les valeurs de l'ancien sm, sm prend
+ * celles de l'ancien md/défaut), plutôt que d'ajuster chaque bouton un
+ * par un.
+ */
+.btn-xs {
+  --fontsize: .75rem;
+  --btn-p: .75rem;
+  --size: calc(var(--size-field, .25rem) * 8);
+}
+
+.btn-sm {
+  --fontsize: .875rem;
+  --btn-p: 1rem;
+  --size: calc(var(--size-field, .25rem) * 10);
 }

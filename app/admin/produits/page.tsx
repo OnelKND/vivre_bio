@@ -40,10 +40,16 @@ export default async function AdminProductsPage({
       </Link>
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-bold text-2xl">Produits</h1>
-        <Link href="/admin/produits/nouveau" className="btn btn-primary btn-sm">
-          <i className="fa-solid fa-plus" aria-hidden="true" />
-          Ajouter un produit
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/admin/produits/liens-whatsapp" className="btn btn-outline btn-sm">
+            <i className="fa-brands fa-whatsapp" aria-hidden="true" />
+            Liens catalogue WhatsApp
+          </Link>
+          <Link href="/admin/produits/nouveau" className="btn btn-primary btn-sm">
+            <i className="fa-solid fa-plus" aria-hidden="true" />
+            Ajouter un produit
+          </Link>
+        </div>
       </div>
 
       <form action="/admin/produits" method="get" className="flex gap-2 mb-2 max-w-sm">
@@ -94,6 +100,7 @@ export default async function AdminProductsPage({
                 <th>Nom</th>
                 <th>Catégorie</th>
                 <th>Prix</th>
+                <th>Stock</th>
                 <th>Vedette</th>
                 <th aria-label="Actions" />
               </tr>
@@ -103,14 +110,35 @@ export default async function AdminProductsPage({
                 <tr key={product.id}>
                   <td>
                     <div className="w-12 h-12 relative rounded-field overflow-hidden bg-base-200">
-                      <Image src={product.image} alt="" fill className="object-cover" />
+                      <Image src={product.image} alt="" fill sizes="48px" className="object-cover" />
                     </div>
                   </td>
-                  <td>{product.name}</td>
+                  <td>
+                    <div className="flex items-center gap-2">
+                      {product.name}
+                      {product.image.endsWith(".svg") && (
+                        <span
+                          className="badge badge-warning badge-xs whitespace-nowrap"
+                          title="Photo produit pas encore uploadée"
+                        >
+                          Sans photo
+                        </span>
+                      )}
+                    </div>
+                  </td>
                   <td className="text-sm text-base-content/60">
                     {categoryNames.get(product.category) ?? product.category}
                   </td>
                   <td>{formatFCFA(product.price)}</td>
+                  <td>
+                    {product.stock <= 0 ? (
+                      <span className="badge badge-accent badge-sm">Épuisé</span>
+                    ) : product.stock <= 5 ? (
+                      <span className="badge badge-warning badge-sm">{product.stock} — bas</span>
+                    ) : (
+                      product.stock
+                    )}
+                  </td>
                   <td>
                     {product.featured && (
                       <span className="badge badge-primary badge-sm">Vedette</span>
