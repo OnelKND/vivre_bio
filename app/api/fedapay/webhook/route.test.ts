@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
 
 vi.mock("./../../../../lib/db", async () => {
-  const { createClient } = require("@libsql/client");
+  const { createClient } = await import("@libsql/client");
   // On garde les exports réels (ensureSchema) et on ne remplace que getDb —
   // un mock qui ne renvoie que { getDb } casse l'import d'ensureSchema
   // plus bas depuis le même module (voir la même correction en Task 3).
@@ -69,7 +69,11 @@ beforeEach(async () => {
   vi.clearAllMocks();
 });
 
-async function createPendingOrder(slug: string, quantity: number): Promise<number> {
+async function createPendingOrder(
+  slug: string,
+  quantity: number,
+  paymentMethod: "cash" | "fedapay" = "fedapay"
+): Promise<number> {
   const { id } = await insertOrder({
     customerName: "Test",
     phone: "90000000",
@@ -80,7 +84,7 @@ async function createPendingOrder(slug: string, quantity: number): Promise<numbe
     items: [{ slug, name: "Produit", unitPrice: 1000, quantity }],
     subtotal: 1000 * quantity,
     total: 1000 * quantity + 500,
-    paymentMethod: "fedapay",
+    paymentMethod,
   });
   return id;
 }
@@ -236,6 +240,82 @@ describe("POST /api/fedapay/webhook", () => {
 
     expect(logSecurityEvent).toHaveBeenCalledWith(
       expect.objectContaining({ type: "fedapay-payment-confirmed", detail: expect.stringContaining(String(orderId)) })
+    );
+  });
+
+  it("rejette avec 409 quand le montant reçu ne correspond pas au total de la commande", async () => {
+    const slug = "produit-test-amount-mismatch";
+    await insertTestProduct(slug, 10);
+    // total attendu : 1000 * 2 + 500 = 2500
+    const orderId = await createPendingOrder(slug, 2);
+
+    const request = signedRequest({
+      name: "transaction.approved",
+      entity: { id: 777, status: "approved", amount: 100, custom_metadata: { orderId } },
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(409);
+
+    const order = await getOrderById(orderId);
+    expect(order?.paymentStatus).toBe("en_attente");
+
+    const productAfter = await getProductBySlug(slug);
+    expect(productAfter?.stock).toBe(10);
+
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "fedapay-amount-mismatch",
+        detail: expect.stringContaining(String(orderId)),
+      })
+    );
+  });
+
+  it("rejette avec 409 quand la commande référencée n'est pas une commande FedaPay", async () => {
+    const slug = "produit-test-wrong-method";
+    await insertTestProduct(slug, 10);
+    const orderId = await createPendingOrder(slug, 1, "cash");
+
+    const request = signedRequest({
+      name: "transaction.approved",
+      entity: { id: 888, status: "approved", amount: 1500, custom_metadata: { orderId } },
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(409);
+
+    const order = await getOrderById(orderId);
+    expect(order?.paymentStatus).toBe("non_requis");
+
+    const productAfter = await getProductBySlug(slug);
+    expect(productAfter?.stock).toBe(10);
+
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "fedapay-webhook-wrong-method",
+        detail: expect.stringContaining(String(orderId)),
+      })
+    );
+  });
+
+  it("journalise une survente mais confirme quand même le paiement", async () => {
+    const slug = "produit-test-oversold";
+    await insertTestProduct(slug, 1); // stock insuffisant pour la commande de 3
+    const orderId = await createPendingOrder(slug, 3);
+
+    const request = signedRequest({
+      name: "transaction.approved",
+      entity: { id: 999, status: "approved", custom_metadata: { orderId } },
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(200);
+
+    const order = await getOrderById(orderId);
+    expect(order?.paymentStatus).toBe("paye");
+
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "fedapay-order-oversold",
+        detail: expect.stringContaining(String(orderId)),
+      })
     );
   });
 });

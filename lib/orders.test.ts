@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 vi.mock("./db", async () => {
-  const { createClient } = require("@libsql/client");
+  const { createClient } = await import("@libsql/client");
   // On garde les exports réels (ensureSchema, etc.) et on ne remplace que
   // getDb, pour brancher un client libSQL en mémoire dédié aux tests. Le
   // mock brut du plan ({ getDb, __client }) casse `ensureSchema` importé
@@ -18,6 +18,7 @@ import {
   markOrderPaymentFailed,
   getOrderByFedapayTransactionId,
   listOrders,
+  listOrdersForExport,
   getOrderPaymentStats,
 } from "./orders";
 import { ensureSchema } from "./db";
@@ -83,6 +84,16 @@ describe("markOrderPaymentFailed", () => {
     const order = await getOrderById(id);
     expect(order?.paymentStatus).toBe("echoue");
   });
+
+  it("ne dégrade pas une commande déjà payée (événement declined tardif)", async () => {
+    const { id } = await insertOrder({ ...baseInput, paymentMethod: "fedapay" });
+    await markOrderPaymentPaid(id, "txn_success");
+    await markOrderPaymentFailed(id, "txn_late_decline");
+
+    const order = await getOrderById(id);
+    expect(order?.paymentStatus).toBe("paye");
+    expect(order?.fedapayTransactionId).toBe("txn_success");
+  });
 });
 
 describe("getOrderByFedapayTransactionId", () => {
@@ -122,5 +133,33 @@ describe("getOrderPaymentStats", () => {
     expect(stats.totalCash).toBe(2500);
     expect(stats.totalFedapayPaid).toBe(2500);
     expect(stats.pendingFedapayCount).toBe(1);
+  });
+
+  it("filtre les agrégats avec query, pour rester cohérent avec la recherche active", async () => {
+    await insertOrder({ ...baseInput, customerName: "Awa Diallo", paymentMethod: "cash" }); // total 2500
+    const { id: paidId } = await insertOrder({
+      ...baseInput,
+      customerName: "Awa Diallo",
+      paymentMethod: "fedapay",
+    }); // total 2500
+    await markOrderPaymentPaid(paidId, "txn_stats_query_1");
+    await insertOrder({ ...baseInput, customerName: "Ignoré", paymentMethod: "cash" }); // total 2500, ne doit pas être compté
+
+    const stats = await getOrderPaymentStats({ query: "Awa" });
+    expect(stats.totalCash).toBe(2500);
+    expect(stats.totalFedapayPaid).toBe(2500);
+  });
+});
+
+describe("listOrdersForExport avec filtre paymentStatus", () => {
+  it("ne renvoie que les commandes correspondant au statut de paiement demandé", async () => {
+    await insertOrder({ ...baseInput, paymentMethod: "cash" });
+    const { id: paidId } = await insertOrder({ ...baseInput, paymentMethod: "fedapay" });
+    await markOrderPaymentPaid(paidId, "txn_export_filter");
+    await insertOrder({ ...baseInput, paymentMethod: "fedapay" }); // reste en_attente
+
+    const orders = await listOrdersForExport({ paymentStatus: "paye" });
+    expect(orders).toHaveLength(1);
+    expect(orders[0].id).toBe(paidId);
   });
 });

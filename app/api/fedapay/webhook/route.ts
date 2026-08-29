@@ -4,7 +4,7 @@ import {
   markOrderPaymentPaid,
   markOrderPaymentFailed,
 } from "@/lib/orders";
-import { decrementStock } from "@/lib/products";
+import { decrementStock, getProductBySlug } from "@/lib/products";
 import { sendOrderNotificationEmail } from "@/lib/mail";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { logSecurityEvent } from "@/lib/security-log";
@@ -15,6 +15,8 @@ export const dynamic = "force-dynamic";
 interface FedapayEntityWithMetadata {
   id: number;
   status: string;
+  amount?: number;
+  currency?: string;
   custom_metadata?: { orderId?: number };
 }
 
@@ -62,12 +64,37 @@ export async function POST(request: Request): Promise<Response> {
     return new Response("Commande introuvable.", { status: 404 });
   }
 
+  if (order.paymentMethod !== "fedapay") {
+    await logSecurityEvent({ type: "fedapay-webhook-wrong-method", ip, detail: `commande #${orderId}` });
+    return new Response("Commande non FedaPay.", { status: 409 });
+  }
+
   const transactionId = String(entity.id);
 
   if (event.name === "transaction.approved") {
+    if (
+      typeof entity.amount === "number" &&
+      (entity.amount !== order.total || (entity.currency && entity.currency !== "XOF"))
+    ) {
+      await logSecurityEvent({
+        type: "fedapay-amount-mismatch",
+        ip,
+        detail: `commande #${orderId}: attendu ${order.total}, reçu ${entity.amount}`,
+      });
+      return new Response("Montant ne correspond pas à la commande.", { status: 409 });
+    }
+
     const { alreadyPaid } = await markOrderPaymentPaid(orderId, transactionId);
     if (!alreadyPaid) {
       for (const item of order.items) {
+        const product = await getProductBySlug(item.slug);
+        if (product && product.stock < item.quantity) {
+          await logSecurityEvent({
+            type: "fedapay-order-oversold",
+            ip,
+            detail: `commande #${orderId}, ${item.slug}: demandé ${item.quantity}, stock ${product.stock}`,
+          });
+        }
         await decrementStock(item.slug, item.quantity);
       }
       const updatedOrder = await getOrderById(orderId);

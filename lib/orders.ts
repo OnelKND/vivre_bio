@@ -195,6 +195,7 @@ export async function listOrders(options: ListOrdersOptions = {}): Promise<ListO
 
 export interface ExportOrdersOptions {
   status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
   /** Dates au format "YYYY-MM-DD", bornes incluses. */
   from?: string;
   to?: string;
@@ -211,6 +212,10 @@ export async function listOrdersForExport(options: ExportOrdersOptions = {}): Pr
   if (status) {
     conditions.push("status = ?");
     params.push(status);
+  }
+  if (options.paymentStatus) {
+    conditions.push("payment_status = ?");
+    params.push(options.paymentStatus);
   }
   if (from) {
     conditions.push("created_at >= ?");
@@ -306,6 +311,12 @@ export async function markOrderPaymentFailed(
   fedapayTransactionId: string
 ): Promise<void> {
   const db = await getDb();
+  const existing = await getOrderById(id);
+  if (!existing) return;
+  // Empêche un événement declined/canceled tardif de dégrader une commande
+  // déjà confirmée payée (ex: retentative client réussie après un premier échec).
+  if (existing.paymentStatus === "paye") return;
+
   await db.execute({
     sql: "UPDATE orders SET payment_status = 'echoue', fedapay_transaction_id = ? WHERE id = ?",
     args: [fedapayTransactionId, id],
@@ -334,13 +345,15 @@ export interface OrderPaymentStatsOptions {
   status?: OrderStatus;
   from?: string;
   to?: string;
+  /** Recherche sur le nom du client ou le téléphone (même filtre que listOrders). */
+  query?: string;
 }
 
 export async function getOrderPaymentStats(
   options: OrderPaymentStatsOptions = {}
 ): Promise<OrderPaymentStats> {
   const db = await getDb();
-  const { status, from, to } = options;
+  const { status, from, to, query } = options;
 
   const conditions: string[] = [];
   const params: (string | number)[] = [];
@@ -355,6 +368,10 @@ export async function getOrderPaymentStats(
   if (to) {
     conditions.push("created_at <= ?");
     params.push(`${to}T23:59:59.999Z`);
+  }
+  if (query) {
+    conditions.push("(customer_name LIKE ? OR phone LIKE ?)");
+    params.push(`%${query}%`, `%${query}%`);
   }
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
