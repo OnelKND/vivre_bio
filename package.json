@@ -6,7 +6,8 @@
     "node": "24.x"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
+    "clean": "rm -rf .next .next-build && next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

@@ -82,6 +82,12 @@ export function getFedapayPublicKey(): string {
   return key;
 }
 
+/**
+ * Déduit l'environnement directement du préfixe de la clé publique
+ * (`pk_sandbox_...` / `pk_live_...`) plutôt que d'exiger une variable
+ * d'environnement séparée qui pourrait finir désynchronisée de la clé
+ * réellement utilisée.
+ */
 export function getFedapayEnvironment(): "sandbox" | "live" {
-  return process.env.FEDAPAY_ENVIRONMENT === "live" ? "live" : "sandbox";
+  return getFedapayPublicKey().startsWith("pk_live_") ? "live" : "sandbox";
 }
