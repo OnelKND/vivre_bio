@@ -27,6 +27,7 @@ export default function FedapayCheckoutButton({
 
   useEffect(() => {
     if (document.querySelector(`script[src="${CHECKOUT_SCRIPT_SRC}"]`)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setScriptLoaded(true);
       return;
     }
@@ -37,7 +38,12 @@ export default function FedapayCheckoutButton({
     document.body.appendChild(script);
   }, []);
 
-  const handleClick = () => {
+  useEffect(() => {
+    // FedaPay's Checkout.js `init()` attaches its own click listener to the
+    // element matching the selector — calling init() from our own onClick
+    // handler means the triggering click is already spent and the modal only
+    // opens on a second click. Initializing once here (as soon as the script
+    // is ready) lets FedaPay's listener handle the very first click.
     if (!scriptLoaded || !window.FedaPay) return;
 
     window.FedaPay.init("#fedapay-checkout-trigger", {
@@ -54,13 +60,12 @@ export default function FedapayCheckoutButton({
         window.location.reload();
       },
     });
-  };
+  }, [scriptLoaded, publicKey, sandbox, amount, orderId]);
 
   return (
     <button
       id="fedapay-checkout-trigger"
       type="button"
-      onClick={handleClick}
       disabled={!scriptLoaded}
       className="btn btn-primary btn-lg"
     >
