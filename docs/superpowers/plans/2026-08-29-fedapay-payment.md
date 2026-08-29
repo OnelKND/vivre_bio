@@ -1692,9 +1692,285 @@ git commit -m "feat: bloc paiement en détail commande admin + colonnes export C
 
 ---
 
+### Task 11: Rate limiting + journalisation sur les endpoints de paiement
+
+**Files:**
+- Modify: `app/api/fedapay/webhook/route.ts`
+- Modify: `app/commande/actions.ts`
+- Test: `app/api/fedapay/webhook/route.test.ts` (ajout de cas)
+
+**Interfaces:**
+- Consumes: `checkRateLimit(key: string, limit: number, windowMs: number): boolean` de `@/lib/rate-limit` (existant) ; `logSecurityEvent(event: SecurityEvent): Promise<void>` de `@/lib/security-log` (existant) ; `getClientIp(): Promise<string>` de `@/lib/client-ip` (existant, basé sur `next/headers`, réutilisable dans `app/commande/actions.ts` car c'est une Server Action qui tourne dans le contexte de requête Next.js)
+- Produces: aucune nouvelle interface exportée — ce sont des ajouts internes aux deux fichiers modifiés.
+
+Contexte : le projet a déjà ce pattern sur `app/contact/actions.ts`, `app/newsletter/actions.ts`, `app/produits/actions.ts` (avis) et `app/admin/login/actions.ts` — tous limitent par IP via `checkRateLimit` avec des seuils de 3 à 10 appels par 10-15 minutes. `app/commande/actions.ts` (le checkout) n'a jamais eu cette protection, pour aucun mode de paiement — c'est une lacune préexistante que cette tâche comble, pas seulement un ajout FedaPay-spécifique.
+
+Le webhook FedaPay (`app/api/fedapay/webhook/route.ts`) est un cas différent : c'est FedaPay qui l'appelle, potentiellement depuis une infrastructure mutualisée entre marchands, donc limiter en débit *tout* appel signé valide risquerait de bloquer du trafic de paiement légitime en cas de pic. La limite s'applique donc uniquement aux tentatives à **signature invalide** (probing/brute-force), jamais aux webhooks correctement signés — quel que soit leur volume.
+
+**Important** : la route webhook (`route.ts`) reçoit l'IP directement depuis l'objet `Request` passé à `POST`, **pas** via `getClientIp()` — cette dernière utilise `headers()` de `next/headers`, qui dépend du contexte de requête Next.js (`AsyncLocalStorage`) uniquement présent quand Next sert réellement la route. Le test de cette route (Task 5) appelle `POST(request)` directement sans runtime Next, donc `getClientIp()` y lèverait une erreur. `app/commande/actions.ts` n'a pas ce problème : c'est une Server Action, jamais appelée directement dans un test (comme pour Tasks 6-7, ce fichier n'a pas de test automatisé), donc `getClientIp()` y fonctionne normalement en production comme dans toutes les actions sœurs déjà citées.
+
+- [ ] **Step 1: Écrire les tests pour le rate limiting et la journalisation du webhook**
+
+Ajouter à `app/api/fedapay/webhook/route.test.ts`, après les imports existants, le mock de `lib/security-log` :
+
+```ts
+vi.mock("@/lib/security-log", () => ({
+  logSecurityEvent: vi.fn().mockResolvedValue(undefined),
+}));
+```
+
+Et l'import correspondant à ajouter à la liste d'imports existante :
+
+```ts
+import { logSecurityEvent } from "@/lib/security-log";
+```
+
+Ajouter les tests suivants au `describe("POST /api/fedapay/webhook", ...)` existant :
+
+```ts
+  it("journalise et rejette avec 401 une signature invalide (sous la limite de débit)", async () => {
+    const request = new Request("http://localhost/api/fedapay/webhook", {
+      method: "POST",
+      headers: {
+        "X-FEDAPAY-SIGNATURE": "t=1,s=invalide",
+        "X-Forwarded-For": "203.0.113.10",
+      },
+      body: JSON.stringify({ name: "transaction.approved", entity: { id: 1, status: "approved" } }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(401);
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "fedapay-webhook-invalid-signature", ip: "203.0.113.10" })
+    );
+  });
+
+  it("bloque avec 429 après trop de signatures invalides depuis la même IP", async () => {
+    const ip = "203.0.113.20";
+    const badRequest = () =>
+      new Request("http://localhost/api/fedapay/webhook", {
+        method: "POST",
+        headers: { "X-FEDAPAY-SIGNATURE": "t=1,s=invalide", "X-Forwarded-For": ip },
+        body: JSON.stringify({ name: "transaction.approved", entity: { id: 1, status: "approved" } }),
+      });
+
+    // La limite (voir implémentation) est de 10 tentatives invalides / 5 minutes.
+    for (let i = 0; i < 10; i += 1) {
+      const response = await POST(badRequest());
+      expect(response.status).toBe(401);
+    }
+    const blockedResponse = await POST(badRequest());
+    expect(blockedResponse.status).toBe(429);
+  });
+
+  it("une signature valide n'est jamais limitée en débit, même après de nombreux appels", async () => {
+    const slug = "produit-test-no-rate-limit";
+    await insertTestProduct(slug, 50);
+    const ip = "203.0.113.30";
+
+    for (let i = 0; i < 15; i += 1) {
+      const orderId = await createPendingOrder(slug, 1);
+      const request = signedRequest({
+        name: "transaction.declined",
+        entity: { id: 1000 + i, status: "declined", custom_metadata: { orderId } },
+      });
+      request.headers.set("X-Forwarded-For", ip);
+      const response = await POST(request);
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it("journalise la confirmation d'un paiement", async () => {
+    const slug = "produit-test-log-approved";
+    await insertTestProduct(slug, 10);
+    const orderId = await createPendingOrder(slug, 1);
+
+    const request = signedRequest({
+      name: "transaction.approved",
+      entity: { id: 555, status: "approved", custom_metadata: { orderId } },
+    });
+    await POST(request);
+
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "fedapay-payment-confirmed", detail: expect.stringContaining(String(orderId)) })
+    );
+  });
+```
+
+Note : `signedRequest` (défini en Task 5) construit un objet `Request` sans en-tête `X-Forwarded-For` — la ligne `request.headers.set(...)` dans le troisième test ci-dessus fonctionne car les en-têtes d'un `Request` Web standard sont mutables via `.set()`. Si `signedRequest` ne prend pas d'en-têtes additionnels, ce test doit construire la requête différemment ; utiliser `Object.fromEntries`, non : le plus simple est de dupliquer `signedRequest` avec un paramètre d'en-têtes optionnel, ou de reconstruire manuellement la requête comme dans les deux tests précédents (avec `X-Forwarded-For` dans le second argument de `new Request`). Choisir l'approche la plus proche du style existant du fichier.
+
+- [ ] **Step 2: Lancer les tests pour vérifier qu'ils échouent**
+
+Run: `npx vitest run app/api/fedapay/webhook/route.test.ts`
+Expected: FAIL — pas de rate limiting ni de journalisation dans la route actuelle
+
+- [ ] **Step 3: Modifier `app/api/fedapay/webhook/route.ts`**
+
+Ajouter les imports :
+
+```ts
+import { checkRateLimit } from "@/lib/rate-limit";
+import { logSecurityEvent } from "@/lib/security-log";
+```
+
+Ajouter les constantes après les imports :
+
+```ts
+const INVALID_SIGNATURE_RATE_LIMIT = 10;
+const INVALID_SIGNATURE_RATE_WINDOW_MS = 5 * 60 * 1000;
+
+/**
+ * IP directement depuis la requête reçue par la route — ne pas utiliser
+ * `getClientIp()` (lib/client-ip.ts) ici : elle dépend de `headers()` de
+ * `next/headers`, qui exige le contexte de requête Next.js, absent quand
+ * cette route est appelée directement dans les tests (`POST(request)`).
+ */
+function getRequestIp(request: Request): string {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+  if (forwardedFor) return forwardedFor.split(",")[0].trim();
+  return request.headers.get("x-real-ip") ?? "unknown";
+}
+```
+
+Remplacer le corps de `POST` pour ajouter la vérification de débit et la journalisation :
+
+```ts
+export async function POST(request: Request): Promise<Response> {
+  const rawBody = await request.text();
+  const signatureHeader = request.headers.get("X-FEDAPAY-SIGNATURE");
+  const ip = getRequestIp(request);
+
+  if (!verifyFedapaySignature(rawBody, signatureHeader)) {
+    if (!checkRateLimit(`fedapay-webhook-invalid:${ip}`, INVALID_SIGNATURE_RATE_LIMIT, INVALID_SIGNATURE_RATE_WINDOW_MS)) {
+      return new Response("Trop de tentatives.", { status: 429 });
+    }
+    await logSecurityEvent({ type: "fedapay-webhook-invalid-signature", ip });
+    return new Response("Signature invalide.", { status: 401 });
+  }
+
+  const event = parseFedapayWebhookEvent(rawBody);
+  if (!event) {
+    return new Response("Payload invalide.", { status: 400 });
+  }
+
+  const entity = event.entity as FedapayEntityWithMetadata;
+  const orderId = entity.custom_metadata?.orderId;
+  if (!orderId) {
+    return new Response("Référence de commande absente.", { status: 400 });
+  }
+
+  const order = await getOrderById(orderId);
+  if (!order) {
+    return new Response("Commande introuvable.", { status: 404 });
+  }
+
+  const transactionId = String(entity.id);
+
+  if (event.name === "transaction.approved") {
+    const { alreadyPaid } = await markOrderPaymentPaid(orderId, transactionId);
+    if (!alreadyPaid) {
+      for (const item of order.items) {
+        await decrementStock(item.slug, item.quantity);
+      }
+      const updatedOrder = await getOrderById(orderId);
+      if (updatedOrder) {
+        await sendOrderNotificationEmail(updatedOrder);
+      }
+      await logSecurityEvent({
+        type: "fedapay-payment-confirmed",
+        ip,
+        detail: `commande #${orderId}, transaction ${transactionId}`,
+      });
+    }
+    return new Response("OK", { status: 200 });
+  }
+
+  if (event.name === "transaction.declined" || event.name === "transaction.canceled") {
+    await markOrderPaymentFailed(orderId, transactionId);
+    await logSecurityEvent({
+      type: "fedapay-payment-failed",
+      ip,
+      detail: `commande #${orderId}, transaction ${transactionId}, événement ${event.name}`,
+    });
+    return new Response("OK", { status: 200 });
+  }
+
+  // Événement FedaPay non géré par ce périmètre (ex: transaction.created) : accusé
+  // de réception sans effet, pour ne pas déclencher de retentatives inutiles côté FedaPay.
+  return new Response("Ignoré.", { status: 200 });
+}
+```
+
+Ce remplacement conserve exactement la logique métier des Tasks 5, en ajoutant seulement : le calcul de `ip`, la vérification de débit + journalisation sur signature invalide, et la journalisation sur confirmation/échec de paiement.
+
+- [ ] **Step 4: Lancer les tests pour vérifier qu'ils passent**
+
+Run: `npx vitest run app/api/fedapay/webhook/route.test.ts`
+Expected: PASS
+
+- [ ] **Step 5: Ajouter le rate limiting sur `app/commande/actions.ts`**
+
+Ajouter les imports après les imports existants :
+
+```ts
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
+import { logSecurityEvent } from "@/lib/security-log";
+```
+
+Ajouter les constantes après les imports :
+
+```ts
+const ORDER_RATE_LIMIT = 10;
+const ORDER_RATE_WINDOW_MS = 10 * 60 * 1000;
+```
+
+Ajouter la vérification tout au début de `createOrder`, avant le `let cartItemsRaw: unknown;` existant :
+
+```ts
+export async function createOrder(
+  _prevState: CheckoutFormState,
+  formData: FormData
+): Promise<CheckoutFormState> {
+  const ip = await getClientIp();
+  if (!checkRateLimit(`order:${ip}`, ORDER_RATE_LIMIT, ORDER_RATE_WINDOW_MS)) {
+    await logSecurityEvent({ type: "order-rate-limited", ip });
+    return {
+      status: "error",
+      message: "Trop de tentatives. Réessayez dans quelques minutes.",
+    };
+  }
+
+  let cartItemsRaw: unknown;
+  // ... reste du corps existant, inchangé
+```
+
+Ce seuil (10 commandes / 10 minutes / IP) couvre les deux modes de paiement — c'est une lacune de sécurité préexistante comblée ici, pas une restriction spécifique à FedaPay. Il est volontairement généreux (aligné sur le pattern `app/newsletter/actions.ts` plutôt que le plus strict `app/contact/actions.ts`) pour ne jamais bloquer un client légitime qui resoumet après une erreur de stock.
+
+- [ ] **Step 6: Vérifier la compilation et la suite complète**
+
+Run: `npx tsc --noEmit`
+Expected: aucune nouvelle erreur
+
+Run: `npx vitest run`
+Expected: PASS (webhook tests inclus), seuls les 3 échecs préexistants connus de `lib/order-pricing.test.ts` subsistent
+
+- [ ] **Step 7: Vérification manuelle (pas de test automatisé pour les Server Actions dans ce projet — même convention que Tasks 6-7)**
+
+Relire `app/commande/actions.ts` : confirmer que le rate limit ne modifie ni la validation zod, ni la logique de décrément de stock, ni la redirection — seulement un retour anticipé si la limite est dépassée.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add app/api/fedapay/webhook/route.ts app/api/fedapay/webhook/route.test.ts app/commande/actions.ts
+git commit -m "feat: rate limiting et journalisation sur les endpoints de paiement"
+```
+
+---
+
 ## Self-Review Notes
 
 - **Couverture spec** : modèle de données (Task 2-3), flux commande + widget (Task 6-7), webhook + sécurité (Task 4-5), config env (Task 8), admin stats/filtre/détail/export (Task 9-10) — toutes les sections de la spec sont couvertes.
+- **Ajout post-brainstorming (Task 11)** : rate limiting + journalisation sur `createOrder` et le webhook, demandés explicitement par le client après la présentation du design initial. Comble une lacune préexistante (`createOrder` n'avait jamais de rate limit, pour aucun mode de paiement) en plus de durcir le webhook contre le brute-force de signature — sans jamais limiter en débit un webhook correctement signé, pour ne pas risquer de bloquer du trafic FedaPay légitime.
 - **Hors périmètre respecté** : aucune tâche n'ajoute de remboursement, de retry admin manuel, ni de notification SMS — conforme à la spec.
 - **Cohérence des types** : `PaymentMethod`/`PaymentStatus` définis une fois (Task 1), réutilisés à l'identique dans `lib/orders.ts`, le webhook, et l'admin — aucune redéfinition divergente.
 - **Diffs exacts** : toutes les tâches, y compris Task 7 (page de confirmation), citent le contenu actuel des fichiers modifiés et l'edit exact à appliquer — vérifié par lecture directe des fichiers pendant la planification.
