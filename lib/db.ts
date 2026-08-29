@@ -150,7 +150,7 @@ const SEED_PRODUCTS = [
   },
 ] as const;
 
-async function ensureSchema(client: Client): Promise<void> {
+export async function ensureSchema(client: Client): Promise<void> {
   const statements = [
     `CREATE TABLE IF NOT EXISTS orders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -214,6 +214,30 @@ async function ensureSchema(client: Client): Promise<void> {
   ];
   for (const statement of statements) {
     await client.execute(statement);
+  }
+  await ensureOrderPaymentColumns(client);
+}
+
+async function ensureOrderPaymentColumns(client: Client): Promise<void> {
+  const info = await client.execute("PRAGMA table_info(orders)");
+  const columns = new Set(
+    (info.rows as unknown as { name: string }[]).map((row) => row.name)
+  );
+
+  if (!columns.has("payment_method")) {
+    await client.execute(
+      "ALTER TABLE orders ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'cash'"
+    );
+  }
+  if (!columns.has("payment_status")) {
+    await client.execute(
+      "ALTER TABLE orders ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'non_requis'"
+    );
+  }
+  if (!columns.has("fedapay_transaction_id")) {
+    await client.execute(
+      "ALTER TABLE orders ADD COLUMN fedapay_transaction_id TEXT"
+    );
   }
 }
 

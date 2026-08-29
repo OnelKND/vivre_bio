@@ -9,6 +9,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
+      // `server-only` lève une erreur inconditionnelle à l'import ; Next.js
+      // la neutralise via son bundler pour les Server Components, mais
+      // Vitest n'a pas cette résolution conditionnelle. On la remplace par
+      // un stub no-op pour pouvoir importer des modules comme lib/db.ts
+      // depuis les tests.
+      "server-only": path.resolve(__dirname, "lib/test/server-only-stub.ts"),
     },
   },
 });
