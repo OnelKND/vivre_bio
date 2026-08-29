@@ -5,7 +5,7 @@ import {
   ORDER_STATUS_LABELS,
   type OrderStatus,
 } from "@/lib/orders";
-import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/order-status";
+import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS, type PaymentStatus } from "@/lib/order-status";
 
 // Jamais mis en cache : c'est un export de données à la demande.
 export const dynamic = "force-dynamic";
@@ -35,8 +35,11 @@ export async function GET(request: Request): Promise<Response> {
   const statutParam = searchParams.get("statut");
   const status =
     statutParam && statutParam !== "toutes" ? (statutParam as OrderStatus) : undefined;
+  const paiementParam = searchParams.get("paiement");
+  const paymentStatus =
+    paiementParam && paiementParam !== "tous" ? (paiementParam as PaymentStatus) : undefined;
 
-  const orders = await listOrdersForExport({ status, from, to });
+  const orders = await listOrdersForExport({ status, paymentStatus, from, to });
 
   const header = toCsvRow([
     "N° commande",

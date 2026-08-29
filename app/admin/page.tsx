@@ -66,7 +66,7 @@ export default async function AdminDashboardPage({
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
-  const stats = await getOrderPaymentStats({ status });
+  const stats = await getOrderPaymentStats({ status, query: q });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pendingReviewsCount = (await getAllReviews()).filter(
     (review) => review.status === "en_attente"
@@ -107,7 +107,7 @@ export default async function AdminDashboardPage({
 
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
         <div className="rounded-box border border-base-300 p-4">
-          <p className="text-xs text-base-content/60 mb-1">Encaissé (livraison/cash)</p>
+          <p className="text-xs text-base-content/60 mb-1">Total commandes cash (tous statuts)</p>
           <p className="font-bold text-xl">{formatFCFA(stats.totalCash)}</p>
         </div>
         <div className="rounded-box border border-base-300 p-4">
