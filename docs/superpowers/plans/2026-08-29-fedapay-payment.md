@@ -757,10 +757,16 @@ Créer `app/api/fedapay/webhook/route.test.ts` :
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
 
-vi.mock("./../../../../lib/db", () => {
+vi.mock("./../../../../lib/db", async () => {
   const { createClient } = require("@libsql/client");
+  // On garde les exports réels (ensureSchema) et on ne remplace que getDb —
+  // un mock qui ne renvoie que { getDb } casse l'import d'ensureSchema
+  // plus bas depuis le même module (voir la même correction en Task 3).
+  const actual = await vi.importActual<typeof import("../../../../lib/db")>(
+    "./../../../../lib/db"
+  );
   const client = createClient({ url: ":memory:" });
-  return { getDb: async () => client };
+  return { ...actual, getDb: async () => client };
 });
 
 vi.mock("@/lib/mail", () => ({
