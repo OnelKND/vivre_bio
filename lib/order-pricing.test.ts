@@ -18,8 +18,8 @@ const { computeOrderItems, computeTotals } = await import("./order-pricing");
 describe("order-pricing", () => {
   const [productA, productB] = FIXTURE_PRODUCTS;
 
-  it("recomputes items from the catalogue, never trusting client-sent prices", () => {
-    const items = computeOrderItems([{ slug: productA.slug, quantity: 2 }]);
+  it("recomputes items from the catalogue, never trusting client-sent prices", async () => {
+    const items = await computeOrderItems([{ slug: productA.slug, quantity: 2 }]);
     expect(items).toEqual([
       {
         slug: productA.slug,
@@ -30,8 +30,8 @@ describe("order-pricing", () => {
     ]);
   });
 
-  it("drops unknown or removed product slugs instead of trusting them", () => {
-    const items = computeOrderItems([
+  it("drops unknown or removed product slugs instead of trusting them", async () => {
+    const items = await computeOrderItems([
       { slug: productA.slug, quantity: 1 },
       { slug: "produit-qui-n-existe-plus", quantity: 5 },
     ]);
@@ -39,8 +39,8 @@ describe("order-pricing", () => {
     expect(items[0]?.slug).toBe(productA.slug);
   });
 
-  it("computes subtotal and total including the delivery fee", () => {
-    const items = computeOrderItems([
+  it("computes subtotal and total including the delivery fee", async () => {
+    const items = await computeOrderItems([
       { slug: productA.slug, quantity: 2 },
       { slug: productB.slug, quantity: 1 },
     ]);
