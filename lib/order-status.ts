@@ -24,3 +24,26 @@ export const ORDER_STATUS_BADGE_CLASS: Record<OrderStatus, string> = {
   expediee: "badge-secondary",
   livree: "badge-primary",
 };
+
+export type PaymentMethod = "cash" | "fedapay";
+export type PaymentStatus = "non_requis" | "en_attente" | "paye" | "echoue";
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: "Paiement à la livraison",
+  fedapay: "FedaPay (en ligne)",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  non_requis: "N/A",
+  en_attente: "En attente",
+  paye: "Payé",
+  echoue: "Échoué",
+};
+
+/** Classes daisyUI par statut de paiement. */
+export const PAYMENT_STATUS_BADGE_CLASS: Record<PaymentStatus, string> = {
+  non_requis: "badge-ghost",
+  en_attente: "badge-warning",
+  paye: "badge-success",
+  echoue: "badge-error",
+};
