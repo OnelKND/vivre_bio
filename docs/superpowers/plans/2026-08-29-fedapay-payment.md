@@ -789,11 +789,28 @@ function signedRequest(body: object): Request {
   });
 }
 
+/**
+ * Insère un produit de test directement en SQL : la DB `:memory:` de ce
+ * test n'appelle que `ensureSchema` (pas `seedIfEmpty`), donc les slugs du
+ * catalogue réel (huile-essentielle-...) n'existent pas ici.
+ */
+async function insertTestProduct(slug: string, stock: number): Promise<void> {
+  const db = await getDb();
+  await db.execute({
+    sql: `INSERT INTO products (
+      slug, name, category, short_description, description,
+      price, volume_ml, image, featured, created_at, stock
+    ) VALUES (?, ?, 'huiles-essentielles', 'desc courte', 'desc longue', 1000, 15, '/x.svg', 0, ?, ?)`,
+    args: [slug, slug, new Date().toISOString(), stock],
+  });
+}
+
 beforeEach(async () => {
   process.env.FEDAPAY_WEBHOOK_SECRET = SECRET;
   const db = await getDb();
   await ensureSchema(db);
   await db.execute("DELETE FROM orders");
+  await db.execute("DELETE FROM products");
   vi.clearAllMocks();
 });
 
@@ -825,11 +842,11 @@ describe("POST /api/fedapay/webhook", () => {
   });
 
   it("transaction.approved marque la commande payée et décrémente le stock", async () => {
-    const product = await getProductBySlug("huile-essentielle-citronnelle");
-    if (!product) throw new Error("Produit de seed introuvable pour le test");
-    const stockBefore = product.stock;
+    const slug = "produit-test-approved";
+    await insertTestProduct(slug, 10);
+    const stockBefore = 10;
 
-    const orderId = await createPendingOrder(product.slug, 2);
+    const orderId = await createPendingOrder(slug, 2);
 
     const request = signedRequest({
       name: "transaction.approved",
@@ -846,15 +863,15 @@ describe("POST /api/fedapay/webhook", () => {
     expect(order?.paymentStatus).toBe("paye");
     expect(order?.fedapayTransactionId).toBe("999");
 
-    const productAfter = await getProductBySlug(product.slug);
+    const productAfter = await getProductBySlug(slug);
     expect(productAfter?.stock).toBe(stockBefore - 2);
     expect(sendOrderNotificationEmail).toHaveBeenCalledTimes(1);
   });
 
   it("un événement transaction.approved dupliqué ne redécrémente pas le stock", async () => {
-    const product = await getProductBySlug("huile-essentielle-eucalyptus");
-    if (!product) throw new Error("Produit de seed introuvable pour le test");
-    const orderId = await createPendingOrder(product.slug, 1);
+    const slug = "produit-test-duplicate";
+    await insertTestProduct(slug, 10);
+    const orderId = await createPendingOrder(slug, 1);
 
     const request = () =>
       signedRequest({
@@ -863,19 +880,19 @@ describe("POST /api/fedapay/webhook", () => {
       });
 
     await POST(request());
-    const stockAfterFirst = (await getProductBySlug(product.slug))?.stock;
+    const stockAfterFirst = (await getProductBySlug(slug))?.stock;
     await POST(request());
-    const stockAfterSecond = (await getProductBySlug(product.slug))?.stock;
+    const stockAfterSecond = (await getProductBySlug(slug))?.stock;
 
     expect(stockAfterSecond).toBe(stockAfterFirst);
     expect(sendOrderNotificationEmail).toHaveBeenCalledTimes(1);
   });
 
   it("transaction.declined marque la commande échouée sans décrémenter", async () => {
-    const product = await getProductBySlug("huile-essentielle-menthe-poivree");
-    if (!product) throw new Error("Produit de seed introuvable pour le test");
-    const stockBefore = product.stock;
-    const orderId = await createPendingOrder(product.slug, 3);
+    const slug = "produit-test-declined";
+    await insertTestProduct(slug, 10);
+    const stockBefore = 10;
+    const orderId = await createPendingOrder(slug, 3);
 
     const request = signedRequest({
       name: "transaction.declined",
@@ -887,7 +904,7 @@ describe("POST /api/fedapay/webhook", () => {
     const order = await getOrderById(orderId);
     expect(order?.paymentStatus).toBe("echoue");
 
-    const productAfter = await getProductBySlug(product.slug);
+    const productAfter = await getProductBySlug(slug);
     expect(productAfter?.stock).toBe(stockBefore);
   });
 
