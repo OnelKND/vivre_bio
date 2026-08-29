@@ -16,6 +16,7 @@ export default function CheckoutPageClient({ products }: { products: Product[] }
   const [zoneSlug, setZoneSlug] = useState(zones[0]?.slug ?? "");
   const [state, formAction, pending] = useActionState(createOrder, initialState);
   const [idempotencyKey, setIdempotencyKey] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState<"cash" | "fedapay">("cash");
 
   useEffect(() => {
     // Généré côté client uniquement (après montage) pour éviter un
@@ -67,6 +68,7 @@ export default function CheckoutPageClient({ products }: { products: Product[] }
       <form action={formAction} className="grid md:grid-cols-2 gap-10">
         <input type="hidden" name="cartItems" value={JSON.stringify(lines)} />
         <input type="hidden" name="idempotencyKey" value={idempotencyKey} />
+        <input type="hidden" name="paymentMethod" value={paymentMethod} />
 
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1">
@@ -131,6 +133,32 @@ export default function CheckoutPageClient({ products }: { products: Product[] }
             ))}
           </fieldset>
 
+          <fieldset className="flex flex-col gap-2">
+            <legend className="font-medium text-sm mb-1">
+              Mode de paiement
+            </legend>
+            <label className="flex items-center gap-3 border border-base-300 rounded-field px-4 py-3 cursor-pointer has-[:checked]:border-primary">
+              <input
+                type="radio"
+                name="paymentMethodChoice"
+                checked={paymentMethod === "cash"}
+                onChange={() => setPaymentMethod("cash")}
+                className="radio radio-primary radio-sm"
+              />
+              Paiement à la livraison (espèces ou Mobile Money)
+            </label>
+            <label className="flex items-center gap-3 border border-base-300 rounded-field px-4 py-3 cursor-pointer has-[:checked]:border-primary">
+              <input
+                type="radio"
+                name="paymentMethodChoice"
+                checked={paymentMethod === "fedapay"}
+                onChange={() => setPaymentMethod("fedapay")}
+                className="radio radio-primary radio-sm"
+              />
+              Payer en ligne maintenant (FedaPay)
+            </label>
+          </fieldset>
+
           {state.status === "error" && (
             <p role="alert" className="text-accent text-sm">
               {state.message}
@@ -144,9 +172,6 @@ export default function CheckoutPageClient({ products }: { products: Product[] }
           >
             {pending ? "Envoi de la commande..." : "Confirmer la commande"}
           </button>
-          <p className="text-xs text-base-content/60">
-            Paiement à la livraison uniquement (espèces ou Mobile Money).
-          </p>
         </div>
 
         <div className="rounded-box border border-base-300 p-6 h-fit">

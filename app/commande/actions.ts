@@ -7,6 +7,7 @@ import { insertOrder, getOrderById } from "@/lib/orders";
 import { computeOrderItems, computeTotals } from "@/lib/order-pricing";
 import { sendOrderNotificationEmail } from "@/lib/mail";
 import { decrementStock, getProductBySlug } from "@/lib/products";
+import type { PaymentMethod } from "@/lib/order-status";
 
 const cartItemSchema = z.object({
   slug: z.string().max(200),
@@ -27,6 +28,7 @@ const checkoutSchema = z.object({
   zoneSlug: z.string().min(1, "Merci de choisir une zone de livraison.").max(100),
   cartItems: z.array(cartItemSchema).min(1, "Votre panier est vide.").max(50),
   idempotencyKey: z.string().max(100).optional(),
+  paymentMethod: z.enum(["cash", "fedapay"]),
 });
 
 export interface CheckoutFormState {
@@ -52,6 +54,7 @@ export async function createOrder(
     zoneSlug: formData.get("zoneSlug"),
     cartItems: cartItemsRaw,
     idempotencyKey: formData.get("idempotencyKey") || undefined,
+    paymentMethod: formData.get("paymentMethod"),
   });
 
   if (!parsed.success) {
@@ -107,9 +110,10 @@ export async function createOrder(
     subtotal,
     total,
     idempotencyKey: parsed.data.idempotencyKey,
+    paymentMethod: parsed.data.paymentMethod,
   });
 
-  if (isNew) {
+  if (isNew && parsed.data.paymentMethod === "cash") {
     for (const item of items) {
       await decrementStock(item.slug, item.quantity);
     }
@@ -119,6 +123,8 @@ export async function createOrder(
       await sendOrderNotificationEmail(order);
     }
   }
+  // Pour FedaPay : ni décrément de stock ni email ici — différés jusqu'à
+  // la confirmation du paiement par webhook (voir app/api/fedapay/webhook).
 
   redirect(`/commande/confirmation/${orderId}`);
 }
