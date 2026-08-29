@@ -37,7 +37,11 @@ export function verifyFedapaySignature(
 
 export interface FedapayWebhookEvent {
   name: string;
-  entity: { id: number; status: string };
+  // FedaPay renvoie d'autres champs sur `entity` selon l'événement (ex.
+  // `custom_metadata` porté par le widget Checkout.js, cf. Task 5) : on ne
+  // valide que `id`/`status` mais on les préserve tous pour les consommateurs
+  // en aval.
+  entity: { id: number; status: string; [key: string]: unknown };
 }
 
 export function parseFedapayWebhookEvent(rawBody: string): FedapayWebhookEvent | null {
@@ -64,7 +68,7 @@ export function parseFedapayWebhookEvent(rawBody: string): FedapayWebhookEvent |
 
   return {
     name: (parsed as { name: string }).name,
-    entity: { id: entity.id, status: entity.status },
+    entity: { ...entity, id: entity.id, status: entity.status },
   };
 }
 
