@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getOrderById, ORDER_STATUS_LABELS } from "@/lib/orders";
+import { getFedapayPublicKey, getFedapayEnvironment } from "@/lib/fedapay";
 import { formatFCFA } from "@/lib/format";
 import ClearCartOnMount from "@/components/cart/ClearCartOnMount";
+import FedapayCheckoutButton from "./FedapayCheckoutButton";
 
 export const metadata: Metadata = {
   title: "Commande confirmée",
@@ -37,9 +39,32 @@ export default async function OrderConfirmationPage({
             {ORDER_STATUS_LABELS[order.status]}
           </span>
         </p>
-        <p className="text-sm text-base-content/60">
-          Paiement à la livraison, en espèces ou par Mobile Money.
-        </p>
+        {order.paymentMethod === "cash" && (
+          <p className="text-sm text-base-content/60">
+            Paiement à la livraison, en espèces ou par Mobile Money.
+          </p>
+        )}
+        {order.paymentMethod === "fedapay" && order.paymentStatus === "paye" && (
+          <p className="text-sm font-medium text-primary">
+            Paiement reçu — merci !
+          </p>
+        )}
+        {order.paymentMethod === "fedapay" &&
+          (order.paymentStatus === "en_attente" || order.paymentStatus === "echoue") && (
+            <div className="flex flex-col items-center gap-2">
+              {order.paymentStatus === "echoue" && (
+                <p className="text-sm text-error">
+                  Le paiement précédent n&apos;a pas abouti. Vous pouvez réessayer :
+                </p>
+              )}
+              <FedapayCheckoutButton
+                publicKey={getFedapayPublicKey()}
+                sandbox={getFedapayEnvironment() === "sandbox"}
+                amount={order.total}
+                orderId={order.id}
+              />
+            </div>
+          )}
         <p className="text-sm text-base-content/60">
           Vous pourrez suivre l&apos;avancement de votre commande à tout moment sur{" "}
           <Link href="/suivi-commande" className="link link-primary">
