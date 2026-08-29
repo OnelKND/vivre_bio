@@ -50,6 +50,7 @@ export interface OrderRecord extends NewOrderInput {
 
 export interface ListOrdersOptions {
   status?: OrderStatus;
+  paymentStatus?: PaymentStatus;
   /** Recherche sur le nom du client ou le téléphone. */
   query?: string;
   limit?: number;
@@ -165,6 +166,10 @@ export async function listOrders(options: ListOrdersOptions = {}): Promise<ListO
   if (status) {
     conditions.push("status = ?");
     params.push(status);
+  }
+  if (options.paymentStatus) {
+    conditions.push("payment_status = ?");
+    params.push(options.paymentStatus);
   }
   if (query) {
     conditions.push("(customer_name LIKE ? OR phone LIKE ?)");
@@ -317,4 +322,60 @@ export async function getOrderByFedapayTransactionId(
   });
   const row = result.rows[0];
   return row ? rowToOrder(row as unknown as OrderRow) : undefined;
+}
+
+export interface OrderPaymentStats {
+  totalCash: number;
+  totalFedapayPaid: number;
+  pendingFedapayCount: number;
+}
+
+export interface OrderPaymentStatsOptions {
+  status?: OrderStatus;
+  from?: string;
+  to?: string;
+}
+
+export async function getOrderPaymentStats(
+  options: OrderPaymentStatsOptions = {}
+): Promise<OrderPaymentStats> {
+  const db = await getDb();
+  const { status, from, to } = options;
+
+  const conditions: string[] = [];
+  const params: (string | number)[] = [];
+  if (status) {
+    conditions.push("status = ?");
+    params.push(status);
+  }
+  if (from) {
+    conditions.push("created_at >= ?");
+    params.push(from);
+  }
+  if (to) {
+    conditions.push("created_at <= ?");
+    params.push(`${to}T23:59:59.999Z`);
+  }
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+  const [cashResult, fedapayPaidResult, pendingResult] = await Promise.all([
+    db.execute({
+      sql: `SELECT COALESCE(SUM(total), 0) as sum FROM orders ${whereClause ? `${whereClause} AND` : "WHERE"} payment_method = 'cash'`,
+      args: params,
+    }),
+    db.execute({
+      sql: `SELECT COALESCE(SUM(total), 0) as sum FROM orders ${whereClause ? `${whereClause} AND` : "WHERE"} payment_method = 'fedapay' AND payment_status = 'paye'`,
+      args: params,
+    }),
+    db.execute({
+      sql: `SELECT COUNT(*) as count FROM orders ${whereClause ? `${whereClause} AND` : "WHERE"} payment_method = 'fedapay' AND payment_status = 'en_attente'`,
+      args: params,
+    }),
+  ]);
+
+  return {
+    totalCash: Number((cashResult.rows[0] as unknown as { sum: number })?.sum ?? 0),
+    totalFedapayPaid: Number((fedapayPaidResult.rows[0] as unknown as { sum: number })?.sum ?? 0),
+    pendingFedapayCount: Number((pendingResult.rows[0] as unknown as { count: number })?.count ?? 0),
+  };
 }

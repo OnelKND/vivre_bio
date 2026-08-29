@@ -17,6 +17,8 @@ import {
   markOrderPaymentPaid,
   markOrderPaymentFailed,
   getOrderByFedapayTransactionId,
+  listOrders,
+  getOrderPaymentStats,
 } from "./orders";
 import { ensureSchema } from "./db";
 import { getDb } from "./db";
@@ -94,5 +96,31 @@ describe("getOrderByFedapayTransactionId", () => {
   it("retourne undefined si aucune commande ne correspond", async () => {
     const order = await getOrderByFedapayTransactionId("inexistant");
     expect(order).toBeUndefined();
+  });
+});
+
+describe("listOrders avec filtre paymentStatus", () => {
+  it("filtre les commandes par statut de paiement", async () => {
+    await insertOrder({ ...baseInput, paymentMethod: "cash" });
+    const { id: fedapayId } = await insertOrder({ ...baseInput, paymentMethod: "fedapay" });
+    await markOrderPaymentPaid(fedapayId, "txn_filter");
+
+    const { orders } = await listOrders({ paymentStatus: "paye" });
+    expect(orders).toHaveLength(1);
+    expect(orders[0].id).toBe(fedapayId);
+  });
+});
+
+describe("getOrderPaymentStats", () => {
+  it("calcule le total cash, le total FedaPay payé et le nombre en attente", async () => {
+    await insertOrder({ ...baseInput, paymentMethod: "cash" }); // total 2500
+    const { id: paidId } = await insertOrder({ ...baseInput, paymentMethod: "fedapay" }); // total 2500
+    await markOrderPaymentPaid(paidId, "txn_stats_1");
+    await insertOrder({ ...baseInput, paymentMethod: "fedapay" }); // reste en_attente
+
+    const stats = await getOrderPaymentStats({});
+    expect(stats.totalCash).toBe(2500);
+    expect(stats.totalFedapayPaid).toBe(2500);
+    expect(stats.pendingFedapayCount).toBe(1);
   });
 });

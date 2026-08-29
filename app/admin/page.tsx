@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import {
   listOrders,
+  getOrderPaymentStats,
   ORDER_STATUS_LABELS,
   ORDER_STATUS_BADGE_CLASS,
   type OrderStatus,
 } from "@/lib/orders";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_BADGE_CLASS,
+  type PaymentStatus,
+} from "@/lib/order-status";
 import { getAllReviews } from "@/lib/reviews";
 import { formatFCFA } from "@/lib/format";
 import { logoutAdmin } from "./login/actions";
@@ -23,11 +30,19 @@ const STATUS_FILTERS: Array<{ slug: OrderStatus | "toutes"; label: string }> = [
   { slug: "livree", label: ORDER_STATUS_LABELS.livree },
 ];
 
+const PAYMENT_STATUS_FILTERS: Array<{ slug: PaymentStatus | "tous"; label: string }> = [
+  { slug: "tous", label: "Tous" },
+  { slug: "en_attente", label: PAYMENT_STATUS_LABELS.en_attente },
+  { slug: "paye", label: PAYMENT_STATUS_LABELS.paye },
+  { slug: "echoue", label: PAYMENT_STATUS_LABELS.echoue },
+];
+
 const PAGE_SIZE = 20;
 
-function buildUrl(params: { statut?: string; q?: string; page?: number }): string {
+function buildUrl(params: { statut?: string; paiement?: string; q?: string; page?: number }): string {
   const search = new URLSearchParams();
   if (params.statut && params.statut !== "toutes") search.set("statut", params.statut);
+  if (params.paiement && params.paiement !== "tous") search.set("paiement", params.paiement);
   if (params.q) search.set("q", params.q);
   if (params.page && params.page > 1) search.set("page", String(params.page));
   const qs = search.toString();
@@ -37,18 +52,21 @@ function buildUrl(params: { statut?: string; q?: string; page?: number }): strin
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ statut?: string; q?: string; page?: string }>;
+  searchParams: Promise<{ statut?: string; paiement?: string; q?: string; page?: string }>;
 }) {
-  const { statut, q, page: pageParam } = await searchParams;
+  const { statut, paiement, q, page: pageParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
   const status = statut && statut !== "toutes" ? (statut as OrderStatus) : undefined;
+  const paymentStatus = paiement && paiement !== "tous" ? (paiement as PaymentStatus) : undefined;
 
   const { orders, total } = await listOrders({
     status,
+    paymentStatus,
     query: q,
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
   });
+  const stats = await getOrderPaymentStats({ status });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const pendingReviewsCount = (await getAllReviews()).filter(
     (review) => review.status === "en_attente"
@@ -87,11 +105,26 @@ export default async function AdminDashboardPage({
         </div>
       </div>
 
+      <div className="grid sm:grid-cols-3 gap-4 mb-6">
+        <div className="rounded-box border border-base-300 p-4">
+          <p className="text-xs text-base-content/60 mb-1">Encaissé (livraison/cash)</p>
+          <p className="font-bold text-xl">{formatFCFA(stats.totalCash)}</p>
+        </div>
+        <div className="rounded-box border border-base-300 p-4">
+          <p className="text-xs text-base-content/60 mb-1">Encaissé (FedaPay)</p>
+          <p className="font-bold text-xl">{formatFCFA(stats.totalFedapayPaid)}</p>
+        </div>
+        <div className="rounded-box border border-base-300 p-4">
+          <p className="text-xs text-base-content/60 mb-1">Paiements FedaPay en attente</p>
+          <p className="font-bold text-xl">{stats.pendingFedapayCount}</p>
+        </div>
+      </div>
+
       <nav aria-label="Filtrer par statut" className="flex flex-wrap gap-2 mb-4">
         {STATUS_FILTERS.map((filter) => (
           <Link
             key={filter.slug}
-            href={buildUrl({ statut: filter.slug, q })}
+            href={buildUrl({ statut: filter.slug, paiement, q })}
             className={`btn rounded-field px-5 whitespace-nowrap ${
               (statut ?? "toutes") === filter.slug ? "btn-primary" : "btn-outline"
             }`}
@@ -101,8 +134,23 @@ export default async function AdminDashboardPage({
         ))}
       </nav>
 
+      <nav aria-label="Filtrer par statut de paiement" className="flex flex-wrap gap-2 mb-4">
+        {PAYMENT_STATUS_FILTERS.map((filter) => (
+          <Link
+            key={filter.slug}
+            href={buildUrl({ statut, paiement: filter.slug, q })}
+            className={`btn btn-sm rounded-field px-4 whitespace-nowrap ${
+              (paiement ?? "tous") === filter.slug ? "btn-secondary" : "btn-outline"
+            }`}
+          >
+            {filter.label}
+          </Link>
+        ))}
+      </nav>
+
       <form action="/admin" method="get" className="flex gap-2 mb-6 max-w-sm">
         {statut && <input type="hidden" name="statut" value={statut} />}
+        {paiement && <input type="hidden" name="paiement" value={paiement} />}
         <input
           type="search"
           name="q"
@@ -121,6 +169,7 @@ export default async function AdminDashboardPage({
         className="flex flex-wrap items-end gap-2 mb-8 p-4 rounded-box border border-base-300 bg-base-200/40"
       >
         {statut && <input type="hidden" name="statut" value={statut} />}
+        {paiement && <input type="hidden" name="paiement" value={paiement} />}
         <div className="flex flex-col gap-1">
           <label htmlFor="from" className="text-xs font-medium text-base-content/70">
             Du
@@ -156,6 +205,7 @@ export default async function AdminDashboardPage({
                   <th>Zone</th>
                   <th>Total</th>
                   <th>Statut</th>
+                  <th>Paiement</th>
                   <th aria-label="Actions" />
                 </tr>
               </thead>
@@ -186,6 +236,18 @@ export default async function AdminDashboardPage({
                       </span>
                     </td>
                     <td>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-xs text-base-content/60">
+                          {PAYMENT_METHOD_LABELS[order.paymentMethod]}
+                        </span>
+                        <span
+                          className={`badge badge-sm ${PAYMENT_STATUS_BADGE_CLASS[order.paymentStatus]} whitespace-nowrap`}
+                        >
+                          {PAYMENT_STATUS_LABELS[order.paymentStatus]}
+                        </span>
+                      </div>
+                    </td>
+                    <td>
                       <Link
                         href={`/admin/commandes/${order.id}`}
                         className="link link-primary text-sm"
@@ -202,7 +264,7 @@ export default async function AdminDashboardPage({
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6">
               <Link
-                href={buildUrl({ statut, q, page: page - 1 })}
+                href={buildUrl({ statut, paiement, q, page: page - 1 })}
                 aria-disabled={page <= 1}
                 className={`btn btn-sm btn-outline ${page <= 1 ? "btn-disabled" : ""}`}
               >
@@ -212,7 +274,7 @@ export default async function AdminDashboardPage({
                 Page {page} / {totalPages}
               </span>
               <Link
-                href={buildUrl({ statut, q, page: page + 1 })}
+                href={buildUrl({ statut, paiement, q, page: page + 1 })}
                 aria-disabled={page >= totalPages}
                 className={`btn btn-sm btn-outline ${page >= totalPages ? "btn-disabled" : ""}`}
               >
