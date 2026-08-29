@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 declare global {
   interface Window {
@@ -24,13 +24,25 @@ export default function FedapayCheckoutButton({
   orderId: number;
 }) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const initialized = useRef(false);
 
   useEffect(() => {
-    if (document.querySelector(`script[src="${CHECKOUT_SCRIPT_SRC}"]`)) {
+    // Ne pas se fier à la simple présence de la balise <script> : elle peut
+    // avoir été ajoutée (par ce composant sur un montage précédent, ou par
+    // un autre) sans que le chargement soit terminé — se fier uniquement à
+    // `window.FedaPay`, qui n'existe qu'une fois le script exécuté.
+    if (window.FedaPay) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setScriptLoaded(true);
       return;
     }
+
+    const existing = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SCRIPT_SRC}"]`);
+    if (existing) {
+      existing.addEventListener("load", () => setScriptLoaded(true));
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = CHECKOUT_SCRIPT_SRC;
     script.async = true;
@@ -44,7 +56,10 @@ export default function FedapayCheckoutButton({
     // handler means the triggering click is already spent and the modal only
     // opens on a second click. Initializing once here (as soon as the script
     // is ready) lets FedaPay's listener handle the very first click.
-    if (!scriptLoaded || !window.FedaPay) return;
+    // `initialized` guards against a second `init()` call (which would
+    // attach a second listener) if this effect ever re-runs.
+    if (!scriptLoaded || !window.FedaPay || initialized.current) return;
+    initialized.current = true;
 
     window.FedaPay.init("#fedapay-checkout-trigger", {
       public_key: publicKey,

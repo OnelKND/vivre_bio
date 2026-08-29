@@ -16,8 +16,17 @@ interface FedapayEntityWithMetadata {
   id: number;
   status: string;
   amount?: number;
-  currency?: string;
+  // FedaPay renvoie `currency` soit en chaîne ISO ("XOF"), soit en objet
+  // ({ iso: "XOF", ... }) selon les endpoints/versions de leur API — on
+  // accepte les deux formes plutôt que de deviner laquelle arrive ici.
+  currency?: string | { iso?: string; code?: string };
   custom_metadata?: { orderId?: number };
+}
+
+function extractCurrencyIso(currency: FedapayEntityWithMetadata["currency"]): string | undefined {
+  if (!currency) return undefined;
+  if (typeof currency === "string") return currency;
+  return currency.iso ?? currency.code;
 }
 
 const INVALID_SIGNATURE_RATE_LIMIT = 10;
@@ -72,16 +81,25 @@ export async function POST(request: Request): Promise<Response> {
   const transactionId = String(entity.id);
 
   if (event.name === "transaction.approved") {
-    if (
-      typeof entity.amount === "number" &&
-      (entity.amount !== order.total || (entity.currency && entity.currency !== "XOF"))
-    ) {
+    if (typeof entity.amount !== "number") {
+      // FedaPay omet parfois `amount` selon la version/l'événement : on ne
+      // peut pas vérifier, mais on le journalise pour garder une trace si
+      // ce cas devient fréquent (au lieu de rouvrir la faille en silence).
       await logSecurityEvent({
-        type: "fedapay-amount-mismatch",
+        type: "fedapay-amount-unverified",
         ip,
-        detail: `commande #${orderId}: attendu ${order.total}, reçu ${entity.amount}`,
+        detail: `commande #${orderId} : entity.amount absent, vérification impossible`,
       });
-      return new Response("Montant ne correspond pas à la commande.", { status: 409 });
+    } else {
+      const currencyIso = extractCurrencyIso(entity.currency);
+      if (entity.amount !== order.total || (currencyIso && currencyIso !== "XOF")) {
+        await logSecurityEvent({
+          type: "fedapay-amount-mismatch",
+          ip,
+          detail: `commande #${orderId}: attendu ${order.total} XOF, reçu ${entity.amount} ${currencyIso ?? "?"}`,
+        });
+        return new Response("Montant ne correspond pas à la commande.", { status: 409 });
+      }
     }
 
     const { alreadyPaid } = await markOrderPaymentPaid(orderId, transactionId);
