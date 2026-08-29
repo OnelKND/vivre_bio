@@ -10,6 +10,11 @@ import {
 import { formatFCFA } from "@/lib/format";
 import { buildWhatsAppLink } from "@/lib/whatsapp";
 import { changeOrderStatus } from "../../actions";
+import {
+  PAYMENT_METHOD_LABELS,
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_BADGE_CLASS,
+} from "@/lib/order-status";
 
 export const metadata: Metadata = {
   title: "Détail commande — Espace VIVRE BIO",
@@ -71,6 +76,27 @@ export default async function AdminOrderDetailPage({
             Passée le {new Date(order.createdAt).toLocaleString("fr-FR")}
           </p>
         </div>
+      </div>
+
+      <div className="rounded-box border border-base-300 p-6 mb-8">
+        <h2 className="font-semibold mb-2">Paiement</h2>
+        <div className="flex items-center gap-3">
+          <span>{PAYMENT_METHOD_LABELS[order.paymentMethod]}</span>
+          <span className={`badge ${PAYMENT_STATUS_BADGE_CLASS[order.paymentStatus]}`}>
+            {PAYMENT_STATUS_LABELS[order.paymentStatus]}
+          </span>
+        </div>
+        {order.fedapayTransactionId && (
+          <p className="text-xs text-base-content/60 mt-2">
+            Référence FedaPay : {order.fedapayTransactionId}
+          </p>
+        )}
+        {order.paymentMethod === "fedapay" && (
+          <p className="text-xs text-base-content/50 mt-2">
+            Le statut de paiement est mis à jour automatiquement par FedaPay
+            (webhook) et ne peut pas être modifié manuellement ici.
+          </p>
+        )}
       </div>
 
       <div className="rounded-box border border-base-300 p-6 mb-8">

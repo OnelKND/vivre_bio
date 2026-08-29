@@ -5,6 +5,7 @@ import {
   ORDER_STATUS_LABELS,
   type OrderStatus,
 } from "@/lib/orders";
+import { PAYMENT_METHOD_LABELS, PAYMENT_STATUS_LABELS } from "@/lib/order-status";
 
 // Jamais mis en cache : c'est un export de données à la demande.
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ export async function GET(request: Request): Promise<Response> {
     "Livraison (FCFA)",
     "Total (FCFA)",
     "Statut",
+    "Mode de paiement",
+    "Statut paiement",
   ]);
 
   const rows = orders
@@ -65,6 +68,8 @@ export async function GET(request: Request): Promise<Response> {
         order.deliveryFee,
         order.total,
         ORDER_STATUS_LABELS[order.status],
+        PAYMENT_METHOD_LABELS[order.paymentMethod],
+        PAYMENT_STATUS_LABELS[order.paymentStatus],
       ])
     )
     .join("");
