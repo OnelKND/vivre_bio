@@ -24,6 +24,7 @@ export default function FedapayCheckoutButton({
   orderId: number;
 }) {
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [scriptError, setScriptError] = useState(false);
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -37,9 +38,12 @@ export default function FedapayCheckoutButton({
       return;
     }
 
+    const handleError = () => setScriptError(true);
+
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${CHECKOUT_SCRIPT_SRC}"]`);
     if (existing) {
       existing.addEventListener("load", () => setScriptLoaded(true));
+      existing.addEventListener("error", handleError);
       return;
     }
 
@@ -47,6 +51,7 @@ export default function FedapayCheckoutButton({
     script.src = CHECKOUT_SCRIPT_SRC;
     script.async = true;
     script.onload = () => setScriptLoaded(true);
+    script.onerror = handleError;
     document.body.appendChild(script);
   }, []);
 
@@ -76,6 +81,15 @@ export default function FedapayCheckoutButton({
       },
     });
   }, [scriptLoaded, publicKey, sandbox, amount, orderId]);
+
+  if (scriptError) {
+    return (
+      <p className="text-sm text-error">
+        Impossible de charger le module de paiement FedaPay. Vérifie ta connexion
+        et réessaie, ou contacte-nous si le problème persiste.
+      </p>
+    );
+  }
 
   return (
     <button
