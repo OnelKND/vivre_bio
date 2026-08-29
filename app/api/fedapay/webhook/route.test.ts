@@ -17,12 +17,17 @@ vi.mock("@/lib/mail", () => ({
   sendOrderNotificationEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("@/lib/security-log", () => ({
+  logSecurityEvent: vi.fn().mockResolvedValue(undefined),
+}));
+
 import { POST } from "./route";
 import { ensureSchema } from "@/lib/db";
 import { getDb } from "@/lib/db";
 import { insertOrder, getOrderById } from "@/lib/orders";
 import { getProductBySlug } from "@/lib/products";
 import { sendOrderNotificationEmail } from "@/lib/mail";
+import { logSecurityEvent } from "@/lib/security-log";
 
 const SECRET = "test_webhook_secret";
 
@@ -165,5 +170,72 @@ describe("POST /api/fedapay/webhook", () => {
     });
     const response = await POST(request);
     expect(response.status).toBe(404);
+  });
+
+  it("journalise et rejette avec 401 une signature invalide (sous la limite de débit)", async () => {
+    const request = new Request("http://localhost/api/fedapay/webhook", {
+      method: "POST",
+      headers: {
+        "X-FEDAPAY-SIGNATURE": "t=1,s=invalide",
+        "X-Forwarded-For": "203.0.113.10",
+      },
+      body: JSON.stringify({ name: "transaction.approved", entity: { id: 1, status: "approved" } }),
+    });
+    const response = await POST(request);
+    expect(response.status).toBe(401);
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "fedapay-webhook-invalid-signature", ip: "203.0.113.10" })
+    );
+  });
+
+  it("bloque avec 429 après trop de signatures invalides depuis la même IP", async () => {
+    const ip = "203.0.113.20";
+    const badRequest = () =>
+      new Request("http://localhost/api/fedapay/webhook", {
+        method: "POST",
+        headers: { "X-FEDAPAY-SIGNATURE": "t=1,s=invalide", "X-Forwarded-For": ip },
+        body: JSON.stringify({ name: "transaction.approved", entity: { id: 1, status: "approved" } }),
+      });
+
+    // La limite (voir implémentation) est de 10 tentatives invalides / 5 minutes.
+    for (let i = 0; i < 10; i += 1) {
+      const response = await POST(badRequest());
+      expect(response.status).toBe(401);
+    }
+    const blockedResponse = await POST(badRequest());
+    expect(blockedResponse.status).toBe(429);
+  });
+
+  it("une signature valide n'est jamais limitée en débit, même après de nombreux appels", async () => {
+    const slug = "produit-test-no-rate-limit";
+    await insertTestProduct(slug, 50);
+    const ip = "203.0.113.30";
+
+    for (let i = 0; i < 15; i += 1) {
+      const orderId = await createPendingOrder(slug, 1);
+      const request = signedRequest({
+        name: "transaction.declined",
+        entity: { id: 1000 + i, status: "declined", custom_metadata: { orderId } },
+      });
+      request.headers.set("X-Forwarded-For", ip);
+      const response = await POST(request);
+      expect(response.status).toBe(200);
+    }
+  });
+
+  it("journalise la confirmation d'un paiement", async () => {
+    const slug = "produit-test-log-approved";
+    await insertTestProduct(slug, 10);
+    const orderId = await createPendingOrder(slug, 1);
+
+    const request = signedRequest({
+      name: "transaction.approved",
+      entity: { id: 555, status: "approved", custom_metadata: { orderId } },
+    });
+    await POST(request);
+
+    expect(logSecurityEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "fedapay-payment-confirmed", detail: expect.stringContaining(String(orderId)) })
+    );
   });
 });

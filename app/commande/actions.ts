@@ -8,6 +8,9 @@ import { computeOrderItems, computeTotals } from "@/lib/order-pricing";
 import { sendOrderNotificationEmail } from "@/lib/mail";
 import { decrementStock, getProductBySlug } from "@/lib/products";
 import type { PaymentMethod } from "@/lib/order-status";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
+import { logSecurityEvent } from "@/lib/security-log";
 
 const cartItemSchema = z.object({
   slug: z.string().max(200),
@@ -36,10 +39,22 @@ export interface CheckoutFormState {
   message?: string;
 }
 
+const ORDER_RATE_LIMIT = 10;
+const ORDER_RATE_WINDOW_MS = 10 * 60 * 1000;
+
 export async function createOrder(
   _prevState: CheckoutFormState,
   formData: FormData
 ): Promise<CheckoutFormState> {
+  const ip = await getClientIp();
+  if (!checkRateLimit(`order:${ip}`, ORDER_RATE_LIMIT, ORDER_RATE_WINDOW_MS)) {
+    await logSecurityEvent({ type: "order-rate-limited", ip });
+    return {
+      status: "error",
+      message: "Trop de tentatives. Réessayez dans quelques minutes.",
+    };
+  }
+
   let cartItemsRaw: unknown;
   try {
     cartItemsRaw = JSON.parse(String(formData.get("cartItems") ?? "[]"));
