@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteReviewAction } from "@/app/admin/avis/actions";
+import { deleteReviewAction } from "@/app/admin/(protected)/avis/actions";
 
 export default function DeleteReviewButton({ id }: { id: number }) {
   return (

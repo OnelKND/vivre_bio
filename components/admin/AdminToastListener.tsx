@@ -19,8 +19,9 @@ export default function AdminToastListener() {
     const deleted = searchParams.get("deleted");
     const published = searchParams.get("published");
     const unpublished = searchParams.get("unpublished");
+    const error = searchParams.get("error");
 
-    if (!created && !updated && !deleted && !published && !unpublished) return;
+    if (!created && !updated && !deleted && !published && !unpublished && !error) return;
     handledSearch.current = currentSearch;
 
     if (created) toast.success(`"${created}" créé avec succès.`);
@@ -28,6 +29,7 @@ export default function AdminToastListener() {
     if (deleted) toast.success(`"${deleted}" supprimé.`);
     if (published) toast.success(`"${published}" publié.`);
     if (unpublished) toast.success(`"${unpublished}" repassé en brouillon.`);
+    if (error) toast.error(error);
 
     const url = new URL(window.location.href);
     url.searchParams.delete("created");
@@ -35,6 +37,7 @@ export default function AdminToastListener() {
     url.searchParams.delete("deleted");
     url.searchParams.delete("published");
     url.searchParams.delete("unpublished");
+    url.searchParams.delete("error");
     router.replace(url.pathname + url.search, { scroll: false });
   }, [searchParams, router]);
 

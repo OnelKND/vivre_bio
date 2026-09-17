@@ -6,7 +6,13 @@ export const THEME_STORAGE_KEY = "vivrebio-theme";
 const LIGHT_THEME = "vivrebio";
 const DARK_THEME = "vivrebio-dark";
 
-export default function ThemeToggle() {
+export default function ThemeToggle({
+  className = "btn btn-ghost btn-circle",
+  iconClassName = "",
+}: {
+  className?: string;
+  iconClassName?: string;
+}) {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -31,9 +37,9 @@ export default function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       aria-label={isDark ? "Activer le thème clair" : "Activer le thème sombre"}
-      className="btn btn-ghost btn-circle"
+      className={className}
     >
-      <i className={`fa-solid ${isDark ? "fa-sun" : "fa-moon"}`} aria-hidden="true" />
+      <i className={`fa-solid ${isDark ? "fa-sun" : "fa-moon"} ${iconClassName}`} aria-hidden="true" />
     </button>
   );
 }

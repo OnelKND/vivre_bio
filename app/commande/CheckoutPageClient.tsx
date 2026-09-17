@@ -4,15 +4,20 @@ import { useActionState, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import type { Product } from "@/lib/products";
-import { getAllDeliveryZones } from "@/lib/delivery-zones";
+import type { DeliveryZone } from "@/lib/delivery-zones";
 import { formatFCFA } from "@/lib/format";
 import { createOrder, type CheckoutFormState } from "./actions";
 
 const initialState: CheckoutFormState = { status: "idle" };
 
-export default function CheckoutPageClient({ products }: { products: Product[] }) {
+export default function CheckoutPageClient({
+  products,
+  zones,
+}: {
+  products: Product[];
+  zones: DeliveryZone[];
+}) {
   const { lines } = useCart();
-  const zones = getAllDeliveryZones();
   const [zoneSlug, setZoneSlug] = useState(zones[0]?.slug ?? "");
   const [state, formAction, pending] = useActionState(createOrder, initialState);
   const [idempotencyKey, setIdempotencyKey] = useState("");

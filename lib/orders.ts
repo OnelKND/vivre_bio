@@ -396,3 +396,63 @@ export async function getOrderPaymentStats(
     pendingFedapayCount: Number((pendingResult.rows[0] as unknown as { count: number })?.count ?? 0),
   };
 }
+
+export interface TopSellingProduct {
+  slug: string;
+  name: string;
+  quantity: number;
+}
+
+export interface DashboardStats {
+  totalRevenue: number;
+  ordersToday: number;
+  totalFedapayPaid: number;
+  pendingFedapayCount: number;
+  topSellingProducts: TopSellingProduct[];
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const db = await getDb();
+
+  const [revenueResult, todayResult, fedapayPaidResult, pendingResult, itemsResult] =
+    await Promise.all([
+      db.execute("SELECT COALESCE(SUM(total), 0) as sum FROM orders"),
+      db.execute(
+        "SELECT COUNT(*) as count FROM orders WHERE strftime('%Y-%m-%d', created_at) = strftime('%Y-%m-%d', 'now')"
+      ),
+      db.execute(
+        "SELECT COALESCE(SUM(total), 0) as sum FROM orders WHERE payment_method = 'fedapay' AND payment_status = 'paye'"
+      ),
+      db.execute(
+        "SELECT COUNT(*) as count FROM orders WHERE payment_method = 'fedapay' AND payment_status = 'en_attente'"
+      ),
+      db.execute("SELECT items_json FROM orders"),
+    ]);
+
+  // Les articles vendus sont stockés en JSON dans chaque commande (pas de
+  // table `order_items` séparée) : l'agrégation par produit se fait donc en
+  // JS plutôt qu'en SQL.
+  const salesBySlug = new Map<string, TopSellingProduct>();
+  for (const row of itemsResult.rows as unknown as { items_json: string }[]) {
+    const items = JSON.parse(row.items_json) as OrderItemRecord[];
+    for (const item of items) {
+      const existing = salesBySlug.get(item.slug);
+      if (existing) {
+        existing.quantity += item.quantity;
+      } else {
+        salesBySlug.set(item.slug, { slug: item.slug, name: item.name, quantity: item.quantity });
+      }
+    }
+  }
+  const topSellingProducts = [...salesBySlug.values()]
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+
+  return {
+    totalRevenue: Number((revenueResult.rows[0] as unknown as { sum: number })?.sum ?? 0),
+    ordersToday: Number((todayResult.rows[0] as unknown as { count: number })?.count ?? 0),
+    totalFedapayPaid: Number((fedapayPaidResult.rows[0] as unknown as { sum: number })?.sum ?? 0),
+    pendingFedapayCount: Number((pendingResult.rows[0] as unknown as { count: number })?.count ?? 0),
+    topSellingProducts,
+  };
+}

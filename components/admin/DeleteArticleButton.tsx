@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteArticleAction } from "@/app/admin/articles/actions";
+import { deleteArticleAction } from "@/app/admin/(protected)/articles/actions";
 
 export default function DeleteArticleButton({ id, title }: { id: number; title: string }) {
   return (

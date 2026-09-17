@@ -18,7 +18,6 @@ export default async function AdminDashboardPage() {
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
       <h1 className="font-bold text-2xl mb-8">Tableau de bord</h1>
-          <Link href="/" className="btn btn-primary mt-4">← Retour à l'accueil</Link>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
         <div className="rounded-box border border-base-300 p-4">

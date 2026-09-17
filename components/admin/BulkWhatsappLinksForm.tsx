@@ -5,7 +5,7 @@ import type { Product } from "@/lib/products";
 import {
   bulkUpdateWhatsappLinksAction,
   type BulkWhatsappLinksState,
-} from "@/app/admin/produits/actions";
+} from "@/app/admin/(protected)/produits/actions";
 
 const initialState: BulkWhatsappLinksState = { status: "idle" };
 

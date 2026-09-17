@@ -17,7 +17,7 @@ export default async function AdminReviewsPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
-      <Link href="/admin" className="text-sm link link-primary mb-6 inline-block">
+      <Link href="/admin/commandes" className="text-sm link link-primary mb-6 inline-block">
         ← Retour aux commandes
       </Link>
       <h1 className="font-bold text-2xl mb-8">Avis clients</h1>

@@ -80,7 +80,7 @@ export async function createOrder(
     };
   }
 
-  const zone = getDeliveryZoneBySlug(parsed.data.zoneSlug);
+  const zone = await getDeliveryZoneBySlug(parsed.data.zoneSlug);
   if (!zone) {
     return { status: "error", message: "Zone de livraison invalide." };
   }

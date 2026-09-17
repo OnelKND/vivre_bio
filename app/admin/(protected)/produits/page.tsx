@@ -35,7 +35,7 @@ export default async function AdminProductsPage({
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
-      <Link href="/admin" className="text-sm link link-primary mb-6 inline-block">
+      <Link href="/admin/commandes" className="text-sm link link-primary mb-6 inline-block">
         ← Retour aux commandes
       </Link>
       <div className="flex items-center justify-between mb-8">

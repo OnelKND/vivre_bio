@@ -9,7 +9,7 @@ import {
   createProductAction,
   updateProductAction,
   type ProductFormState,
-} from "@/app/admin/produits/actions";
+} from "@/app/admin/(protected)/produits/actions";
 
 const initialState: ProductFormState = { status: "idle" };
 

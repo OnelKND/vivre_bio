@@ -1,6 +1,6 @@
 "use client";
 
-import { deleteProductAction } from "@/app/admin/produits/actions";
+import { deleteProductAction } from "@/app/admin/(protected)/produits/actions";
 
 export default function DeleteProductButton({
   id,

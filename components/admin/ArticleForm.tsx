@@ -7,7 +7,7 @@ import {
   createArticleAction,
   updateArticleAction,
   type ArticleFormState,
-} from "@/app/admin/articles/actions";
+} from "@/app/admin/(protected)/articles/actions";
 import RichTextEditor from "./RichTextEditor";
 
 const initialState: ArticleFormState = { status: "idle" };

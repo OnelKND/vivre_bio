@@ -211,6 +211,13 @@ export async function ensureSchema(client: Client): Promise<void> {
       status TEXT NOT NULL DEFAULT 'en_attente',
       created_at TEXT NOT NULL
     )`,
+    `CREATE TABLE IF NOT EXISTS delivery_zones (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      slug TEXT NOT NULL UNIQUE,
+      label TEXT NOT NULL,
+      fee INTEGER NOT NULL,
+      sort_order INTEGER NOT NULL DEFAULT 0
+    )`,
   ];
   for (const statement of statements) {
     await client.execute(statement);
@@ -285,11 +292,31 @@ async function seedIfEmpty(client: Client): Promise<void> {
   }
 }
 
+const SEED_DELIVERY_ZONES = [
+  { slug: "cotonou-intra-muros", label: "Cotonou intra-muros", fee: 1000 },
+  { slug: "peripherie-cotonou", label: "Périphérie de Cotonou", fee: 1500 },
+  { slug: "autres-villes-benin", label: "Autres villes du Bénin", fee: 2500 },
+] as const;
+
+async function seedDeliveryZonesIfEmpty(client: Client): Promise<void> {
+  const result = await client.execute("SELECT COUNT(*) as count FROM delivery_zones");
+  const count = Number(result.rows[0]?.count ?? 0);
+  if (count > 0) return;
+
+  for (const [index, zone] of SEED_DELIVERY_ZONES.entries()) {
+    await client.execute({
+      sql: "INSERT INTO delivery_zones (slug, label, fee, sort_order) VALUES (?, ?, ?, ?)",
+      args: [zone.slug, zone.label, zone.fee, index],
+    });
+  }
+}
+
 async function initClient(): Promise<Client> {
   const config = resolveClientConfig();
   const client = createClient(config);
   await ensureSchema(client);
   await seedIfEmpty(client);
+  await seedDeliveryZonesIfEmpty(client);
   return client;
 }
 

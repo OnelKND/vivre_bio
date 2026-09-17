@@ -13,9 +13,7 @@ import {
   PAYMENT_STATUS_BADGE_CLASS,
   type PaymentStatus,
 } from "@/lib/order-status";
-import { getAllReviews } from "@/lib/reviews";
 import { formatFCFA } from "@/lib/format";
-import { logoutAdmin } from "./login/actions";
 
 export const metadata: Metadata = {
   title: "Commandes — Espace VIVRE BIO",
@@ -46,10 +44,10 @@ function buildUrl(params: { statut?: string; paiement?: string; q?: string; page
   if (params.q) search.set("q", params.q);
   if (params.page && params.page > 1) search.set("page", String(params.page));
   const qs = search.toString();
-  return qs ? `/admin?${qs}` : "/admin";
+  return qs ? `/admin/commandes?${qs}` : "/admin/commandes";
 }
 
-export default async function AdminDashboardPage({
+export default async function AdminCommandesPage({
   searchParams,
 }: {
   searchParams: Promise<{ statut?: string; paiement?: string; q?: string; page?: string }>;
@@ -68,42 +66,11 @@ export default async function AdminDashboardPage({
   });
   const stats = await getOrderPaymentStats({ status, query: q });
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const pendingReviewsCount = (await getAllReviews()).filter(
-    (review) => review.status === "en_attente"
-  ).length;
 
   return (
     <div className="mx-auto max-w-5xl px-4 sm:px-6 py-12">
       <div className="flex items-center justify-between mb-8">
         <h1 className="font-bold text-2xl">Commandes</h1>
-        <div className="flex items-center gap-2">
-          <Link href="/admin/produits" className="btn btn-primary btn-sm">
-            <i className="fa-solid fa-box" aria-hidden="true" />
-            Produits
-          </Link>
-          <Link href="/admin/articles" className="btn btn-primary btn-sm">
-            <i className="fa-solid fa-newspaper" aria-hidden="true" />
-            Articles
-          </Link>
-          <Link href="/admin/avis" className="btn btn-primary btn-sm">
-            <i className="fa-solid fa-star" aria-hidden="true" />
-            Avis
-            {pendingReviewsCount > 0 && (
-              <span className="badge badge-accent badge-xs">{pendingReviewsCount}</span>
-            )}
-          </Link>
-          <Link href="/admin/abonnes" className="btn btn-primary btn-sm">
-            <i className="fa-solid fa-envelope" aria-hidden="true" />
-            Abonnés
-          </Link>
-          <Link href="/" className="btn btn-primary btn-sm"><i className="fa-solid fa-house" aria-hidden="true" /> Retour accueil</Link>
-          <form action={logoutAdmin}>
-            <button type="submit" className="btn btn-ghost btn-sm">
-              <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
-              Déconnexion
-            </button>
-          </form>
-        </div>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-6">
@@ -149,7 +116,7 @@ export default async function AdminDashboardPage({
         ))}
       </nav>
 
-      <form action="/admin" method="get" className="flex gap-2 mb-6 max-w-sm">
+      <form action="/admin/commandes" method="get" className="flex gap-2 mb-6 max-w-sm">
         {statut && <input type="hidden" name="statut" value={statut} />}
         {paiement && <input type="hidden" name="paiement" value={paiement} />}
         <input

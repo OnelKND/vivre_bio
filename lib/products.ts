@@ -93,6 +93,12 @@ export async function getProductById(id: number): Promise<Product | undefined> {
   return row ? rowToProduct(row as unknown as ProductRow) : undefined;
 }
 
+export async function getOutOfStockProducts(): Promise<Product[]> {
+  const db = await getDb();
+  const result = await db.execute("SELECT * FROM products WHERE stock <= 0 ORDER BY name ASC");
+  return result.rows.map((row) => rowToProduct(row as unknown as ProductRow));
+}
+
 export async function getProductsByCategory(category: CategorySlug): Promise<Product[]> {
   const db = await getDb();
   const result = await db.execute({

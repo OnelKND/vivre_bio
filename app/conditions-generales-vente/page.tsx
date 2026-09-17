@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
 import { getAllDeliveryZones } from "@/lib/delivery-zones";
 
+// Les zones de livraison vivent en base et peuvent changer depuis l'admin.
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Conditions générales de vente",
   description: "Conditions générales de vente du site VIVRE BIO : commande, livraison et paiement à la livraison.",
 };
 
-export default function CGVPage() {
-  const zones = getAllDeliveryZones();
+export default async function CGVPage() {
+  const zones = await getAllDeliveryZones();
 
   return (
     <div className="mx-auto max-w-3xl px-4 sm:px-6 py-16 flex flex-col gap-4">

@@ -28,7 +28,7 @@ export default async function HomePage() {
   );
   const STATS = [
     { value: `${(await getAllProducts()).length}+`, label: "Produits naturels" },
-    { value: `${getAllDeliveryZones().length}`, label: "Zones livrées au Bénin" },
+    { value: `${(await getAllDeliveryZones()).length}`, label: "Zones livrées au Bénin" },
     { value: "100%", label: "Artisanal, made in BENIN" },
   ];
 

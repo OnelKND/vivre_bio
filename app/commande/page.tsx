@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getAllProducts } from "@/lib/products";
+import { getAllDeliveryZones } from "@/lib/delivery-zones";
 import CheckoutPageClient from "./CheckoutPageClient";
 
 // Le catalogue vit en base et peut changer à tout moment depuis l'admin.
@@ -13,6 +14,6 @@ export const metadata: Metadata = {
 };
 
 export default async function CheckoutPage() {
-  const products = await getAllProducts();
-  return <CheckoutPageClient products={products} />;
+  const [products, zones] = await Promise.all([getAllProducts(), getAllDeliveryZones()]);
+  return <CheckoutPageClient products={products} zones={zones} />;
 }

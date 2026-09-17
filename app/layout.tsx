@@ -2,9 +2,7 @@ import type { Metadata } from "next";
 import { Poppins, Great_Vibes } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
-import Header from "@/components/layout/Header";
-import Footer from "@/components/layout/Footer";
-import WhatsAppButton from "@/components/layout/WhatsAppButton";
+import SiteChrome from "@/components/layout/SiteChrome";
 import { CartProvider } from "@/lib/cart-context";
 
 const poppins = Poppins({
@@ -60,10 +58,7 @@ export default function RootLayout({
           <style>{`.reveal{opacity:1!important;transform:none!important;}`}</style>
         </noscript>
         <CartProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <WhatsAppButton />
+          <SiteChrome>{children}</SiteChrome>
         </CartProvider>
         <Script
           src="https://kit.fontawesome.com/27290c1c94.js"
