@@ -10,7 +10,7 @@ declare global {
   }
 }
 
-const CHECKOUT_SCRIPT_SRC = "https://cdn.fedapay.com/checkout.js?v=1.1.7";
+const CHECKOUT_SCRIPT_SRC = "/fedapay/checkout.js";
 
 export default function FedapayCheckoutButton({
   publicKey,
