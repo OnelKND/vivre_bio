@@ -28,7 +28,12 @@ export default function FedapayCheckoutButton({
   const initialized = useRef(false);
 
   useEffect(() => {
-    // Ne pas se fier à la simple présence de la balise <script> : elle peut
+    console.log('Checking if FedaPay script is already loaded');
+    if (window.FedaPay) {
+      console.log('FedaPay script already loaded');
+    } else {
+      console.log('Loading FedaPay script from', CHECKOUT_SCRIPT_SRC);
+    }
     // avoir été ajoutée (par ce composant sur un montage précédent, ou par
     // un autre) sans que le chargement soit terminé — se fier uniquement à
     // `window.FedaPay`, qui n'existe qu'une fois le script exécuté.
@@ -66,6 +71,7 @@ export default function FedapayCheckoutButton({
     if (!scriptLoaded || !window.FedaPay || initialized.current) return;
     initialized.current = true;
 
+    console.log('Initializing FedaPay with options', { publicKey, sandbox, amount, orderId });
     window.FedaPay.init("#fedapay-checkout-trigger", {
       public_key: publicKey,
       environment: sandbox ? "sandbox" : "live",
@@ -77,6 +83,7 @@ export default function FedapayCheckoutButton({
       onComplete: () => {
         // Le statut réel est confirmé par le webhook, pas par ce callback
         // (qui peut se déclencher avant que FedaPay ait notifié le serveur).
+        console.log('FedaPay onComplete callback fired');
         window.location.reload();
       },
     });
