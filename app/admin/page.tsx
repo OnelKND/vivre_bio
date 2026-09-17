@@ -96,6 +96,7 @@ export default async function AdminDashboardPage({
             <i className="fa-solid fa-envelope" aria-hidden="true" />
             Abonnés
           </Link>
+          <Link href="/" className="btn btn-primary btn-sm"><i className="fa-solid fa-house" aria-hidden="true" /> Retour accueil</Link>
           <form action={logoutAdmin}>
             <button type="submit" className="btn btn-ghost btn-sm">
               <i className="fa-solid fa-right-from-bracket" aria-hidden="true" />
