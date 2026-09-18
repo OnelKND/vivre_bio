@@ -8,7 +8,7 @@ export default function Logo({ className = "" }: { className?: string }) {
       aria-label="VIVRE BIO — Retour à l'accueil"
       className={`inline-flex items-center gap-2.5 py-2 ${className}`}
     >
-      <img src="/logo.png" alt="VIVRE BIO" className="h-25 w-25 object-contain" />
+      <img src="/logo.png" alt="VIVRE BIO" className="h-20 w-20 object-contain" />
     </Link>
   );
 }
