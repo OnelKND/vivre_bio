@@ -32,6 +32,7 @@ export default function Footer() {
       </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="md:col-span-1">
+          <img src="/logo2.png" alt="VIVRE BIO" className="h-12 w-12 object-contain mb-2" />
           <span className="font-sans font-bold text-2xl text-white">
             VIVRE <span className="text-secondary">BIO</span>
           </span>
