@@ -33,9 +33,6 @@ export default function Footer() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="md:col-span-1">
           <img src="/logo2.png" alt="VIVRE BIO" className="h-12 w-12 object-contain mb-2" />
-          <span className="font-sans font-bold text-2xl text-white">
-            VIVRE <span className="text-secondary">BIO</span>
-          </span>
           <p className="font-accent text-3xl text-secondary mt-2">
             Le meilleur de la nature pour vous
           </p>
@@ -105,7 +102,7 @@ export default function Footer() {
 
       <div className="border-t border-white/10">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-neutral-content/70">
-          <p>© {year} VIVRE BIO — Tous droits réservés.</p>
+          <p>© {year} Tous droits réservés.</p>
           <div className="flex gap-4">
             <Link href="/mentions-legales" className="hover:text-secondary">
               Mentions légales
