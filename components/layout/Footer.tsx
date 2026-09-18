@@ -6,7 +6,7 @@ const SOCIAL_LINKS = [
   { label: "Facebook", icon: "fa-brands fa-facebook", href: "https://www.facebook.com/share/1BFH2G1FmX/?mibextid=wwXIfr" },
   { label: "Instagram", icon: "fa-brands fa-instagram", href: "https://www.instagram.com/vivre27854?igsh=bDVsb3E3bmRyYnh6" },
   { label: "TikTok", icon: "fa-brands fa-tiktok", href: "https://www.tiktok.com/@vivre_bio?_r=1&_t=ZS-98ojS1BsxS1" },
-  { label: "WhatsApp", icon: "fa-brands fa-whatsapp", href: "https://wa.me/22967242407" },
+  { label: "WhatsApp", icon: "fa-brands fa-whatsapp", href: "https://wa.me/22991043434" },
 ];
 
 export default function Footer() {
@@ -32,7 +32,7 @@ export default function Footer() {
       </div>
       <div className="mx-auto max-w-6xl px-4 sm:px-6 py-12 grid gap-10 sm:grid-cols-2 md:grid-cols-4">
         <div className="md:col-span-1">
-          <img src="/logo2.png" alt="VIVRE BIO" className="h-10 w-25 object-contain mb-2" />
+          <img src="/logo2.png" alt="VIVRE BIO" className="h-60 w-60 object-contain mb-2" />
           <p className="font-accent text-3xl text-secondary mt-2">
             Le meilleur de la nature pour vous
           </p>
