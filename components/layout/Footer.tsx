@@ -107,9 +107,7 @@ export default function Footer() {
             <Link href="/mentions-legales" className="hover:text-secondary">
               Mentions légales
             </Link>
-            <Link href="/conditions-generales-vente" className="hover:text-secondary">
-              CGV
-            </Link>
+            <a href="https://himaogroup.netlify.app/" target="_blank" rel="noopener noreferrer" className="hover:text-secondary">fait par HIMAO Group</a>
           </div>
         </div>
       </div>
