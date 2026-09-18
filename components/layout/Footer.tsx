@@ -3,10 +3,10 @@ import { getAllCategories } from "@/lib/categories";
 import NewsletterForm from "./NewsletterForm";
 
 const SOCIAL_LINKS = [
-  { label: "Facebook", icon: "fa-brands fa-facebook", href: "#" },
-  { label: "Instagram", icon: "fa-brands fa-instagram", href: "#" },
-  { label: "TikTok", icon: "fa-brands fa-tiktok", href: "#" },
-  { label: "WhatsApp", icon: "fa-brands fa-whatsapp", href: "#" },
+  { label: "Facebook", icon: "fa-brands fa-facebook", href: "https://www.facebook.com/share/1BFH2G1FmX/?mibextid=wwXIfr" },
+  { label: "Instagram", icon: "fa-brands fa-instagram", href: "https://www.instagram.com/vivre27854?igsh=bDVsb3E3bmRyYnh6" },
+  { label: "TikTok", icon: "fa-brands fa-tiktok", href: "https://www.tiktok.com/@vivre_bio?_r=1&_t=ZS-98ojS1BsxS1" },
+  { label: "WhatsApp", icon: "fa-brands fa-whatsapp", href: "https://wa.me/22967242407" },
 ];
 
 export default function Footer() {
@@ -78,7 +78,7 @@ export default function Footer() {
             </li>
             <li className="flex items-center gap-2">
               <i className="fa-solid fa-phone w-4" aria-hidden="true" />
-              +229 00 00 00 00
+              +229 01 67 24 24 07
             </li>
             <li className="flex items-center gap-2">
               <i className="fa-solid fa-envelope w-4" aria-hidden="true" />
